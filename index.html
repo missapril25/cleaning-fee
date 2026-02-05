@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>掃地費收費登記 - Google 試算表同步版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        body { background-color: #f3ede4; font-family: 'Noto Sans TC', sans-serif; color: #444; }
+        .ethno-card { background: #ffffff; border-radius: 1.5rem; border: 2px solid #a67c52; }
+        .ethno-pattern { height: 12px; background: repeating-linear-gradient(45deg, #c05c3c, #c05c3c 10px, #e9c46a 10px, #e9c46a 20px, #2a9d8f 20px, #2a9d8f 30px); }
+        .btn-ethno { background-color: #c05c3c; color: white; transition: all 0.3s; }
+        .btn-ethno:hover { background-color: #a04a2f; }
+        .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #c05c3c; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body class="py-12 px-4">
+    <div class="max-w-4xl mx-auto space-y-8">
+        <div class="ethno-card shadow-2xl no-print">
+            <div class="ethno-pattern"></div>
+            <div class="p-8">
+                <header class="text-center mb-8">
+                    <h1 class="text-2xl font-bold text-amber-900">掃地費試算表登記表</h1>
+                    <p class="text-stone-500 text-sm">資料將直接存入您的 Google Sheets</p>
+                </header>
+                <form id="paymentForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-stone-700">姓名</label>
+                        <input type="text" id="name" required class="w-full px-4 py-3 rounded-xl border outline-none focus:border-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-stone-700">年份</label>
+                        <select id="year" class="w-full px-4 py-3 rounded-xl border outline-none"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-stone-700">月份</label>
+                        <select id="month" class="w-full px-4 py-3 rounded-xl border outline-none">
+                            <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option><option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option><option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option><option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-stone-700">金額</label>
+                        <input type="number" id="amount" required class="w-full px-4 py-3 rounded-xl border outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-stone-700">日期</label>
+                        <input type="date" id="paymentDate" required class="w-full px-4 py-3 rounded-xl border outline-none">
+                    </div>
+                    <button type="submit" id="submitBtn" class="md:col-span-2 btn-ethno font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2">
+                        <span id="btnText">確認登記並上傳</span>
+                    </button>
+                </form>
+            </div>
+            <div class="ethno-pattern opacity-50"></div>
+        </div>
+
+        <div id="pdf-content" class="ethno-card shadow-xl bg-white">
+            <div class="ethno-pattern"></div>
+            <div class="p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-amber-900">試算表同步清單</h2>
+                    <div class="flex gap-2">
+                        <button onclick="fetchData()" class="no-print bg-stone-100 text-stone-600 py-2 px-4 rounded-lg text-sm font-bold">重新整理</button>
+                        <button onclick="downloadPDF()" class="no-print bg-teal-600 text-white py-2 px-4 rounded-lg shadow text-sm font-bold">下載 PDF</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-stone-50 border-b">
+                                <th class="py-3 px-4 w-16 text-center text-xs text-stone-500">序號</th>
+                                <th class="py-3 px-4 text-xs text-stone-500">姓名</th>
+                                <th class="py-3 px-4 text-xs text-stone-500">年月</th>
+                                <th class="py-3 px-4 text-xs text-stone-500">金額</th>
+                                <th class="py-3 px-4 text-xs text-stone-500">日期</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listBody">
+                            <tr><td colspan="5" class="py-10 text-center text-stone-400 italic">資料載入中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 請將下方的網址替換為您的 Google Apps Script 部署網址 ---
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyEHJqZuJ9yOEaLIL9qTwDzZKplCoz6uVf-nN0fjoytPorA4NYAWjwCfsE2365Lx1AJkQ/exec"; 
+
+        const form = document.getElementById('paymentForm');
+        const listBody = document.getElementById('listBody');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // 初始化
+        function init() {
+            const currentYear = new Date().getFullYear();
+            const yearSelect = document.getElementById('year');
+            for (let i = currentYear - 1; i <= currentYear + 1; i++) {
+                const opt = document.createElement('option');
+                opt.value = i; opt.textContent = i + ' 年';
+                if (i === currentYear) opt.selected = true;
+                yearSelect.appendChild(opt);
+            }
+            document.getElementById('paymentDate').valueAsDate = new Date();
+            document.getElementById('month').value = new Date().getMonth() + 1;
+            fetchData();
+        }
+
+        // 讀取資料 (GET)
+        async function fetchData() {
+            if (!GAS_URL.startsWith("https")) {
+                listBody.innerHTML = `<tr><td colspan="5" class="py-10 text-center text-red-400">請先在程式碼中設定 GAS_URL</td></tr>`;
+                return;
+            }
+
+            try {
+                const response = await fetch(GAS_URL);
+                const data = await response.json();
+                renderTable(data);
+            } catch (error) {
+                console.error("Fetch error:", error);
+                listBody.innerHTML = `<tr><td colspan="5" class="py-10 text-center text-red-400">載入失敗，請確認 GAS 是否正確部署並開啟所有人存取</td></tr>`;
+            }
+        }
+
+        function renderTable(data) {
+            listBody.innerHTML = '';
+            if (data.length === 0) {
+                listBody.innerHTML = `<tr><td colspan="5" class="py-10 text-center text-stone-400">目前尚無紀錄</td></tr>`;
+                return;
+            }
+
+            // 倒序顯示 (最新的在上面)
+            data.reverse().forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.className = "border-b border-stone-100 hover:bg-stone-50";
+                row.innerHTML = `
+                    <td class="py-4 px-4 text-center text-stone-400 text-xs">${data.length - index}</td>
+                    <td class="py-4 px-4 font-medium">${item['姓名']}</td>
+                    <td class="py-4 px-4 text-sm">${item['年份']} / ${item['月份']}月</td>
+                    <td class="py-4 px-4 font-bold text-amber-700">$ ${parseInt(item['金額']).toLocaleString()}</td>
+                    <td class="py-4 px-4 text-xs text-stone-500">${new Date(item['日期']).toLocaleDateString()}</td>
+                `;
+                listBody.appendChild(row);
+            });
+        }
+
+        // 新增資料 (POST)
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const btnText = document.getElementById('btnText');
+            btnText.innerHTML = '<span class="loading-spinner"></span> 上傳中...';
+            submitBtn.disabled = true;
+
+            const payload = {
+                action: 'add',
+                name: document.getElementById('name').value,
+                year: document.getElementById('year').value,
+                month: document.getElementById('month').value,
+                amount: document.getElementById('amount').value,
+                payDate: document.getElementById('paymentDate').value
+            };
+
+            try {
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                form.reset();
+                init(); // 重新整理資料
+            } catch (error) {
+                console.error("Upload error:", error);
+                alert("上傳失敗，請檢查網路或 GAS 設定");
+            } finally {
+                btnText.textContent = "確認登記並上傳";
+                submitBtn.disabled = false;
+            }
+        };
+
+        function downloadPDF() {
+            const element = document.getElementById('pdf-content');
+            html2pdf().set({ margin: 10, filename: '掃地費清單.pdf', html2canvas: { scale: 2 } }).from(element).save();
+        }
+
+        init();
+    </script>
+</body>
+</html>
