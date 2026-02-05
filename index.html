@@ -100,7 +100,10 @@
         <!-- 查詢區域 -->
         <div class="ethno-card shadow-xl overflow-hidden bg-stone-50/50">
             <div class="p-8">
-                <h2 class="text-xl font-bold text-amber-900 mb-6">查詢個人繳費紀錄</h2>
+                <h2 class="text-xl font-bold text-amber-900 mb-6 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    查詢個人繳費紀錄
+                </h2>
                 <div class="flex flex-col md:flex-row gap-4 mb-6">
                     <input type="text" id="searchName" placeholder="輸入姓名查詢" class="flex-1 px-4 py-3 rounded-xl border-2 border-stone-200 outline-none focus:border-amber-500 transition-colors">
                     <button onclick="searchRecords()" class="bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-md">查詢</button>
@@ -125,7 +128,7 @@
 
     <!-- 刪除確認 Modal -->
     <div id="deleteModal" class="fixed inset-0 bg-stone-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-3xl p-8 max-sm:w-full max-w-sm shadow-2xl border-2 border-amber-900/10 text-center">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border-2 border-amber-900/10 text-center">
             <h3 class="text-xl font-bold text-stone-800 mb-4">確認要刪除嗎？</h3>
             <div class="flex gap-4">
                 <button onclick="closeDeleteModal()" class="flex-1 py-3 bg-stone-100 hover:bg-stone-200 rounded-xl font-bold transition-colors">取消</button>
@@ -163,7 +166,8 @@
                 const response = await fetch(GAS_URL);
                 const data = await response.json();
                 if (Array.isArray(data)) {
-                    data.sort((a, b) => (a['姓名'] || '').localeCompare((b['姓名'] || ''), 'zh-Hant'));
+                    // 修正：確保姓名轉為字串再排序，避免資料庫回傳純數字導致報錯
+                    data.sort((a, b) => String(a['姓名'] || '').localeCompare(String(b['姓名'] || ''), 'zh-Hant'));
                 }
                 cachedData = data; 
                 renderTable(data);
@@ -226,7 +230,8 @@
             ws['!cols'] = [{ wch: 6 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 15 }];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "收費清單");
-            XLSX.writeFile(wb, `掃地費登記清單_${new Date().toISOString().slice(0,10)}.xlsx`);
+            const fileName = `掃地費登記清單_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
         }
 
         function searchRecords() {
@@ -236,7 +241,8 @@
             
             if (!name) return;
             
-            const results = cachedData.filter(item => (item['姓名'] || '').includes(name));
+            // 修正：在 filter 中強制將 item['姓名'] 轉為字串，防止數字型態導致 includes 報錯
+            const results = cachedData.filter(item => String(item['姓名'] || '').includes(name));
             resultBody.innerHTML = '';
             
             if (results.length > 0) {
@@ -260,7 +266,7 @@
         form.onsubmit = async (e) => {
             e.preventDefault();
             const originalBtnText = document.getElementById('btnText').textContent;
-            document.getElementById('btnText').textContent = "上傳中...";
+            document.getElementById('btnText').textContent = "登記中...";
             submitBtn.disabled = true;
             const payload = {
                 action: 'add',
