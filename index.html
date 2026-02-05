@@ -26,7 +26,7 @@
             <div class="p-8">
                 <header class="text-center mb-8">
                     <h1 class="text-2xl font-bold text-amber-900">掃地費試算表登記表</h1>
-                    <p class="text-stone-500 text-sm">資料將直接存入您的 Google Sheets</p>
+                    <!-- 已移除「資料將直接存入您的 Google Sheets」 -->
                 </header>
                 <form id="paymentForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="md:col-span-2">
@@ -150,7 +150,8 @@
                 return;
             }
 
-            const sortedData = [...data].reverse(); 
+            // 將資料排列好（假設原始資料是由舊到新）
+            const sortedData = [...data]; 
             sortedData.forEach((item, index) => {
                 const row = document.createElement('tr');
                 row.className = "border-b border-stone-100 hover:bg-stone-50 transition";
@@ -163,8 +164,9 @@
                 const dateStr = item['日期'] || item.payDate || '';
                 const formattedDate = dateStr ? new Date(dateStr).toLocaleDateString() : '-';
 
+                // 序號從 1 開始遞增
                 row.innerHTML = `
-                    <td class="py-4 px-4 text-center text-stone-400 text-xs">${sortedData.length - index}</td>
+                    <td class="py-4 px-4 text-center text-stone-400 text-xs">${index + 1}</td>
                     <td class="py-4 px-4 font-medium">${name}</td>
                     <td class="py-4 px-4 text-sm">${year} / ${month}月</td>
                     <td class="py-4 px-4 font-bold text-amber-700">$ ${parseInt(amount).toLocaleString()}</td>
@@ -255,7 +257,12 @@
 
         function downloadPDF() {
             const element = document.getElementById('pdf-content');
-            html2pdf().set({ margin: 10, filename: '登記清單.pdf', html2canvas: { scale: 2 } }).from(element).save();
+            html2pdf().set({ 
+                margin: 10, 
+                filename: '登記清單.pdf', 
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(element).save();
         }
 
         window.onload = init;
