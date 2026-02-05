@@ -26,7 +26,6 @@
             <div class="p-8">
                 <header class="text-center mb-8">
                     <h1 class="text-2xl font-bold text-amber-900">掃地費試算表登記表</h1>
-                    <!-- 已移除「資料將直接存入您的 Google Sheets」 -->
                 </header>
                 <form id="paymentForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="md:col-span-2">
@@ -48,7 +47,7 @@
                         <input type="number" id="amount" required class="w-full px-4 py-3 rounded-xl border outline-none">
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-stone-700">日期</label>
+                        <label class="block text-sm font-bold text-stone-700">實際收費日期</label>
                         <input type="date" id="paymentDate" required class="w-full px-4 py-3 rounded-xl border outline-none">
                     </div>
                     <button type="submit" id="submitBtn" class="md:col-span-2 btn-ethno font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2">
@@ -77,8 +76,8 @@
                                 <th class="py-3 px-4 text-xs text-stone-500">姓名</th>
                                 <th class="py-3 px-4 text-xs text-stone-500">年月</th>
                                 <th class="py-3 px-4 text-xs text-stone-500">金額</th>
-                                <th class="py-3 px-4 text-xs text-stone-500 border-r">日期</th>
-                                <th class="py-3 px-4 text-center text-xs text-stone-500 no-print">操作</th>
+                                <th class="py-3 px-4 text-xs text-stone-500 border-r">實際收費日期</th>
+                                <th class="py-3 px-4 text-center text-xs text-stone-500 no-print">刪除</th>
                             </tr>
                         </thead>
                         <tbody id="listBody">
@@ -103,7 +102,6 @@
     </div>
 
     <script>
-        // --- 請更換為您的最新 GAS 網址 ---
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyEHJqZuJ9yOEaLIL9qTwDzZKplCoz6uVf-nN0fjoytPorA4NYAWjwCfsE2365Lx1AJkQ/exec"; 
 
         const form = document.getElementById('paymentForm');
@@ -143,6 +141,20 @@
             }
         }
 
+        // 輔助函式：尋找物件中可能的日期屬性
+        function findDateValue(obj) {
+            // 優先嘗試精確匹配
+            const priorityKeys = ['實際收費日期', '日期', 'payDate', 'Date', 'paymentDate'];
+            for (let key of priorityKeys) {
+                if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") return obj[key];
+            }
+            
+            // 模糊匹配：尋找包含關鍵字的欄位
+            const keys = Object.keys(obj);
+            const fallbackKey = keys.find(k => k.includes('日期') || k.toLowerCase().includes('date'));
+            return fallbackKey ? obj[fallbackKey] : null;
+        }
+
         function renderTable(data) {
             listBody.innerHTML = '';
             if (!Array.isArray(data) || data.length === 0) {
@@ -150,9 +162,7 @@
                 return;
             }
 
-            // 將資料排列好（假設原始資料是由舊到新）
-            const sortedData = [...data]; 
-            sortedData.forEach((item, index) => {
+            data.forEach((item, index) => {
                 const row = document.createElement('tr');
                 row.className = "border-b border-stone-100 hover:bg-stone-50 transition";
                 
@@ -161,10 +171,24 @@
                 const year = item['年份'] || item.year || '-';
                 const month = item['月份'] || item.month || '-';
                 const amount = item['金額'] || item.amount || 0;
-                const dateStr = item['日期'] || item.payDate || '';
-                const formattedDate = dateStr ? new Date(dateStr).toLocaleDateString() : '-';
+                
+                // 使用輔助函式抓取日期
+                const rawDate = findDateValue(item);
+                
+                let formattedDate = '-';
+                if (rawDate) {
+                    const d = new Date(rawDate);
+                    if (!isNaN(d.getTime())) {
+                        const y = d.getFullYear();
+                        const m = (d.getMonth() + 1).toString().padStart(2, '0');
+                        const day = d.getDate().toString().padStart(2, '0');
+                        formattedDate = `${y}/${m}/${day}`;
+                    } else {
+                        // 如果是字串但 Date 解析失敗，嘗試擷取前10碼 (YYYY-MM-DD)
+                        formattedDate = rawDate.toString().substring(0, 10).replace(/-/g, '/');
+                    }
+                }
 
-                // 序號從 1 開始遞增
                 row.innerHTML = `
                     <td class="py-4 px-4 text-center text-stone-400 text-xs">${index + 1}</td>
                     <td class="py-4 px-4 font-medium">${name}</td>
@@ -217,7 +241,6 @@
             }
         };
 
-        // 刪除邏輯
         window.requestDelete = (id) => {
             if (!id) return;
             currentDeleteId = id;
