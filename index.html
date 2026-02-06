@@ -139,7 +139,7 @@
                     <div class="space-y-2">
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">繳款人姓名</label>
                         <select id="memberSelect" onchange="selectedMember = this.value" class="w-full bg-white/50 border border-slate-100 rounded-2xl px-4 py-4 outline-none font-semibold shadow-sm focus:ring-4 focus:ring-emerald-500/5 transition-all">
-                            <option value="">請選擇繳款人...</option>
+                            <option value="">載入中...</option>
                         </select>
                     </div>
 
@@ -255,9 +255,10 @@
 </div>
 
 <script>
-    const API_URL = ''; // 請填入您的 GAS 網址
+    const API_URL = ''; // 重要：請填入您的 GAS 網址
     
-    const MEMBERS = ["王小明", "李小華", "張大強", "陳美美", "林曉芬", "黃金發", "周杰倫", "蔡依林"];
+    // 初始名單改為空，待 GAS 回傳後更新
+    let MEMBERS = []; 
     const MONTHLY_FEE = 200;
 
     let records = [];
@@ -272,13 +273,6 @@
     };
 
     function initUI() {
-        const memberSelect = document.getElementById('memberSelect');
-        MEMBERS.sort().forEach(name => {
-            const opt = document.createElement('option');
-            opt.value = name; opt.innerText = name;
-            memberSelect.appendChild(opt);
-        });
-
         const monthGrid = document.getElementById('monthGrid');
         const filterMonthSelect = document.getElementById('filterMonth');
         const now = new Date();
@@ -309,12 +303,47 @@
         }
     }
 
+    // 更新繳款人下拉選單
+    function updateMemberDropdown(memberList) {
+        const memberSelect = document.getElementById('memberSelect');
+        memberSelect.innerHTML = '<option value="">請選擇繳款人...</option>';
+        
+        if (!memberList || memberList.length === 0) {
+            memberSelect.innerHTML = '<option value="">無成員資料</option>';
+            return;
+        }
+
+        // 排序並過濾掉空值
+        MEMBERS = [...new Set(memberList)].filter(n => n).sort();
+        
+        MEMBERS.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name; opt.innerText = name;
+            memberSelect.appendChild(opt);
+        });
+    }
+
     async function fetchData() {
         try {
             const resp = await fetch(API_URL);
-            records = await resp.json();
+            const data = await resp.json();
+            
+            // 假設 GAS 端會傳回 { records: [...], members: [...] }
+            // 或者我們從 records 中提取所有人名
+            if (data.members) {
+                updateMemberDropdown(data.members);
+            } else if (data.length > 0) {
+                // 如果只傳回 records 陣列，則自動提取裡面出現過的名字
+                const extractedMembers = [...new Set(data.map(r => r.姓名))];
+                updateMemberDropdown(extractedMembers);
+            }
+            
+            records = Array.isArray(data) ? data : (data.records || []);
             renderTable();
-        } catch (e) { console.error("讀取失敗", e); }
+        } catch (e) { 
+            console.error("讀取失敗", e);
+            document.getElementById('memberSelect').innerHTML = '<option value="">載入失敗</option>';
+        }
     }
 
     async function submitData() {
@@ -368,7 +397,6 @@
         filtered.sort((a, b) => b.費用年月.localeCompare(a.費用年月));
 
         tbody.innerHTML = filtered.map(r => {
-            // 處理收款日期顯示格式 (GAS 傳回的通常是 ISO 格式字串)
             let formattedPayDate = "-";
             if(r.收款日期) {
                 try {
@@ -419,7 +447,7 @@
         let bodyHtml = "";
         currentReportData.pdfRows = [];
 
-        MEMBERS.sort().forEach(name => {
+        MEMBERS.forEach(name => {
             const userRecords = records.filter(r => r.姓名 === name && r.費用年月.toString().startsWith(targetYear));
             let rowData = [name];
             let rowHtml = `<td class="font-bold text-slate-700 bg-slate-50/50">${name}</td>`;
