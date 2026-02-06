@@ -9,121 +9,30 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Noto+Sans+TC:wght@300;400;700&display=swap');
-        
-        :root {
-            --accent: #10b981;
-            --bg-base: #f8fafc;
-        }
-
-        body { 
-            font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
-            background-color: var(--bg-base);
-            overflow-x: hidden;
-            min-height: 100vh;
-            color: #1e293b;
-        }
-
-        /* 高級背景設計 */
-        .bg-mesh {
-            position: fixed;
-            inset: 0;
-            z-index: -10;
-            background-color: #f8fafc;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, rgba(20, 184, 166, 0.05) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.05) 0px, transparent 50%),
-                radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
-        }
-
-        /* 動態流動光暈 */
-        .blob {
-            position: fixed;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
-            border-radius: 50%;
-            z-index: -5;
-            filter: blur(80px);
-            animation: float 20s infinite alternate ease-in-out;
-        }
-
-        .blob-1 { top: -100px; right: -100px; animation-delay: 0s; }
-        .blob-2 { bottom: -100px; left: -100px; animation-delay: -5s; background: radial-gradient(circle, rgba(20, 184, 166, 0.08) 0%, rgba(255, 255, 255, 0) 70%); }
-
-        @keyframes float {
-            0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(50px, 100px) scale(1.1); }
-        }
-
-        .glass-card {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px) saturate(160%);
-            -webkit-backdrop-filter: blur(12px) saturate(160%);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.02), 0 2px 8px -1px rgba(0, 0, 0, 0.02);
-        }
-
-        .btn-gradient {
-            background: linear-gradient(135deg, #10b981 0%, #0d9488 100%);
-            box-shadow: 0 10px 25px -8px rgba(16, 185, 129, 0.4);
-            transition: all 0.3s ease;
-        }
-
-        .btn-gradient:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 30px -10px rgba(16, 185, 129, 0.5);
-        }
-
-        .month-item {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .month-item.selected {
-            border-color: #10b981;
-            background-color: #10b981;
-            color: white;
-            box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.3);
-        }
-
-        #previewModal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 50;
-            background: rgba(15, 23, 42, 0.3);
-            backdrop-filter: blur(12px);
-        }
-
+        :root { --accent: #10b981; --bg-base: #f8fafc; }
+        body { font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif; background-color: var(--bg-base); color: #1e293b; min-height: 100vh; }
+        .bg-mesh { position: fixed; inset: 0; z-index: -10; background-image: radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.05) 0px, transparent 50%); }
+        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.02); }
+        .btn-gradient { background: linear-gradient(135deg, #10b981 0%, #0d9488 100%); transition: all 0.3s ease; }
+        .month-item.selected { border-color: #10b981; background-color: #10b981; color: white; }
+        #previewModal { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(12px); }
         .preview-table th { background-color: #f8fafc; font-size: 10px; padding: 12px 4px; border: 1px solid #f1f5f9; color: #64748b; }
         .preview-table td { font-size: 12px; padding: 10px 4px; text-align: center; border: 1px solid #f1f5f9; }
         .status-v { color: #10b981; font-weight: 700; }
-        .status-x { color: #e2e8f0; }
-
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     </style>
 </head>
 <body class="p-4 md:p-10">
 
-<!-- 背景裝飾 -->
 <div class="bg-mesh"></div>
-<div class="blob blob-1"></div>
-<div class="blob blob-2"></div>
 
 <div id="app" class="max-w-7xl mx-auto relative z-10">
-    <!-- Header -->
-    <header class="flex flex-col items-center mb-12 space-y-4 text-center">
-        <div class="inline-block px-4 py-1.5 mb-2 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-[0.2em]">
-            Financial Management
-        </div>
-        <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 tracking-tight">
-            掃地費<span class="text-transparent bg-clip-text bg-gradient-to-br from-emerald-400 to-teal-600">登記小幫手</span>
-        </h1>
+    <header class="flex flex-col items-center mb-12 text-center">
+        <div class="inline-block px-4 py-1.5 mb-2 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-black tracking-widest uppercase">Database Connected</div>
+        <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 tracking-tight">掃地費<span class="text-transparent bg-clip-text bg-gradient-to-br from-emerald-400 to-teal-600">登記小幫手</span></h1>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -134,28 +43,22 @@
                     <span class="w-1.5 h-6 bg-gradient-to-b from-emerald-400 to-teal-500 rounded-full"></span>
                     費用登記
                 </h2>
-                
                 <div class="space-y-6">
                     <div class="space-y-2">
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">繳款人姓名</label>
                         <select id="memberSelect" onchange="selectedMember = this.value" class="w-full bg-white/50 border border-slate-100 rounded-2xl px-4 py-4 outline-none font-semibold shadow-sm focus:ring-4 focus:ring-emerald-500/5 transition-all">
-                            <option value="">載入中...</option>
+                            <option value="">請先填寫 API 網址...</option>
                         </select>
                     </div>
-
                     <div class="space-y-3">
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">費用年月 (多選)</label>
                         <div id="monthGrid" class="grid grid-cols-3 gap-2.5 max-h-52 overflow-y-auto custom-scrollbar pr-1"></div>
                     </div>
-
                     <div class="space-y-2">
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">收款日期</label>
                         <input type="date" id="payDate" class="w-full bg-white/50 border border-slate-100 rounded-2xl px-4 py-4 outline-none font-semibold text-slate-600 shadow-sm">
                     </div>
-
-                    <button id="submitBtn" onclick="submitData()" class="btn-gradient w-full text-white font-black py-4 rounded-2xl transition-all text-sm tracking-widest">
-                        確認登記
-                    </button>
+                    <button id="submitBtn" onclick="submitData()" class="btn-gradient w-full text-white font-black py-4 rounded-2xl transition-all text-sm tracking-widest">確認登記</button>
                 </div>
             </div>
         </div>
@@ -164,52 +67,37 @@
         <div class="lg:col-span-8 space-y-8">
             <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
                 <div class="glass-card p-6 rounded-[2.5rem]">
-                    <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 mb-4">
-                        <i class="fas fa-wallet text-sm"></i>
-                    </div>
                     <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">收費總金額</p>
                     <h3 class="text-3xl font-extrabold text-slate-900" id="totalAmount">0</h3>
                 </div>
                 <div class="glass-card p-6 rounded-[2.5rem]">
-                    <div class="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-500 mb-4">
-                        <i class="fas fa-receipt text-sm"></i>
-                    </div>
-                    <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">筆數</p>
+                    <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">總筆數</p>
                     <h3 class="text-3xl font-extrabold text-slate-900" id="totalCount">0</h3>
                 </div>
-                <div class="p-6 rounded-[2.5rem] bg-slate-900 text-white col-span-2 md:col-span-1 flex flex-col justify-center shadow-xl">
-                    <p class="opacity-50 text-[10px] font-black uppercase tracking-widest mb-1">每月固定費用金額</p>
-                    <h3 class="text-2xl font-extrabold tracking-tighter">NT$ 200 <span class="text-xs opacity-50 font-normal">/ 月</span></h3>
+                <div class="p-6 rounded-[2.5rem] bg-slate-900 text-white flex flex-col justify-center">
+                    <p class="opacity-50 text-[10px] font-black uppercase tracking-widest mb-1">每月金額</p>
+                    <h3 class="text-2xl font-extrabold">NT$ 200</h3>
                 </div>
             </div>
 
             <div class="glass-card rounded-[3rem] overflow-hidden">
-                <div class="p-8 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <h3 class="text-xl font-black text-slate-800 tracking-tight">收款明細紀錄</h3>
-                    <button onclick="openPreview()" class="bg-slate-900 text-white px-6 py-3 rounded-2xl text-xs font-black flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">
-                        <i class="fas fa-file-invoice"></i> 預覽年度報表
-                    </button>
+                <div class="p-8 border-b flex justify-between items-center bg-white/50">
+                    <h3 class="text-xl font-black text-slate-800">收款明細紀錄</h3>
+                    <button onclick="openPreview()" class="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-xs font-black">年度總表</button>
                 </div>
-
-                <div class="px-8 py-5 bg-slate-50/50 flex flex-col sm:flex-row gap-4">
-                    <div class="relative flex-1">
-                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
-                        <input type="text" id="searchInput" oninput="renderTable()" placeholder="搜尋姓名..." class="w-full bg-white border border-slate-100 rounded-xl pl-10 pr-4 py-2.5 text-xs outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all">
-                    </div>
-                    <select id="filterMonth" onchange="renderTable()" class="bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-xs outline-none min-w-[140px] font-semibold text-slate-600">
-                        <option value="">所有月份</option>
-                    </select>
+                <div class="px-8 py-4 bg-slate-50/50 flex gap-4">
+                    <input type="text" id="searchInput" oninput="renderTable()" placeholder="搜尋姓名..." class="flex-1 bg-white border border-slate-100 rounded-xl px-4 py-2 text-xs outline-none">
+                    <select id="filterMonth" onchange="renderTable()" class="bg-white border border-slate-100 rounded-xl px-4 py-2 text-xs outline-none"></select>
                 </div>
-                
                 <div class="overflow-x-auto custom-scrollbar">
                     <table class="w-full text-left min-w-[600px]">
                         <thead>
-                            <tr class="text-slate-400 text-[10px] uppercase tracking-[0.15em] font-black">
-                                <th class="px-8 py-5">繳款人</th>
-                                <th class="px-8 py-5">費用年月</th>
-                                <th class="px-8 py-5">收款日期</th>
-                                <th class="px-8 py-5 text-right">金額</th>
-                                <th class="px-8 py-5 text-center">刪除</th>
+                            <tr class="text-slate-400 text-[10px] uppercase font-black">
+                                <th class="px-8 py-4">繳款人</th>
+                                <th class="px-8 py-4">費用年月</th>
+                                <th class="px-8 py-4">收款日期</th>
+                                <th class="px-8 py-4 text-right">金額</th>
+                                <th class="px-8 py-4 text-center">刪除</th>
                             </tr>
                         </thead>
                         <tbody id="recordTableBody" class="divide-y divide-slate-50"></tbody>
@@ -220,47 +108,31 @@
     </div>
 </div>
 
-<!-- 年度報表預覽彈窗 -->
 <div id="previewModal" class="flex items-center justify-center p-6">
     <div class="bg-white w-full max-w-5xl max-h-[85vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden">
-        <div class="p-8 border-b flex justify-between items-center bg-white">
-            <div>
-                <h3 class="text-2xl font-black text-slate-900" id="previewTitle">年度繳費總表預覽</h3>
-                <p class="text-slate-400 text-xs font-medium mt-1">請確認報表內容後再行導出</p>
-            </div>
-            <button onclick="closePreview()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-all text-xl">&times;</button>
+        <div class="p-8 border-b flex justify-between items-center">
+            <h3 class="text-2xl font-black" id="previewTitle">年度繳費總表</h3>
+            <button onclick="closePreview()" class="text-slate-400 text-2xl">&times;</button>
         </div>
-        
-        <div class="flex-1 overflow-auto p-8 custom-scrollbar bg-slate-50/30">
-            <div class="inline-block min-w-full align-middle">
-                <table class="w-full preview-table border-collapse bg-white rounded-2xl overflow-hidden shadow-sm" id="tableForPDF">
-                    <thead>
-                        <tr id="previewHeader" class="text-slate-500"></tr>
-                    </thead>
-                    <tbody id="previewBody"></tbody>
-                </table>
-            </div>
+        <div class="flex-1 overflow-auto p-8 bg-slate-50/30">
+            <table class="w-full preview-table bg-white rounded-2xl overflow-hidden" id="tableForPDF">
+                <thead><tr id="previewHeader"></tr></thead>
+                <tbody id="previewBody"></tbody>
+            </table>
         </div>
-
-        <div class="p-8 border-t bg-white grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <button onclick="closePreview()" class="py-4 bg-slate-100 text-slate-600 font-black rounded-2xl order-3 sm:order-1 hover:bg-slate-200 transition-all">關閉</button>
-            <button onclick="downloadCSV()" class="py-4 bg-emerald-50 text-emerald-600 border border-emerald-100 font-black rounded-2xl flex items-center justify-center gap-2 order-2 sm:order-2 hover:bg-emerald-100 transition-all">
-                <i class="fas fa-file-csv"></i> 下載 CSV
-            </button>
-            <button onclick="downloadPDF()" class="py-4 btn-gradient text-white font-black rounded-2xl flex items-center justify-center gap-2 order-1 sm:order-3">
-                <i class="fas fa-file-pdf"></i> 下載 PDF 報表
-            </button>
+        <div class="p-8 border-t flex gap-4">
+            <button onclick="downloadCSV()" class="flex-1 py-4 bg-emerald-50 text-emerald-600 font-bold rounded-2xl">CSV 下載</button>
+            <button onclick="downloadPDF()" class="flex-1 py-4 btn-gradient text-white font-bold rounded-2xl">PDF 下載</button>
         </div>
     </div>
 </div>
 
 <script>
-    const API_URL = ''; // 重要：請填入您的 GAS 網址
+    // --- 請在這裡填入你的 Google Apps Script 部署網址 ---
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxCbfV9gMe3eRDzSNiGo39gpgbUPVKr7Tjj5eJeapmahQj3cqvXm2LRzyidknr7sZJXyg/exec'; 
     
-    // 初始名單改為空，待 GAS 回傳後更新
     let MEMBERS = []; 
     const MONTHLY_FEE = 200;
-
     let records = [];
     let selectedMember = "";
     let selectedMonths = [];
@@ -268,28 +140,31 @@
 
     window.onload = () => {
         document.getElementById('payDate').valueAsDate = new Date();
-        initUI();
-        if(API_URL) fetchData();
+        initMonths();
+        if(API_URL.includes('exec')) {
+            fetchData();
+        } else {
+            document.getElementById('memberSelect').innerHTML = '<option value="">請填寫 API 網址</option>';
+        }
     };
 
-    function initUI() {
+    function initMonths() {
         const monthGrid = document.getElementById('monthGrid');
         const filterMonthSelect = document.getElementById('filterMonth');
+        filterMonthSelect.innerHTML = '<option value="">所有月份</option>';
         const now = new Date();
-        
-        for (let i = -2; i < 10; i++) {
+        for (let i = -5; i < 12; i++) {
             const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
             const val = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`;
-            const label = `${(d.getMonth()+1)}月`;
-            const yearLabel = d.getFullYear();
+            const label = `${d.getFullYear()}/${d.getMonth()+1}月`;
             
             const opt = document.createElement('option');
-            opt.value = val; opt.innerText = `${yearLabel}/${label}`;
+            opt.value = val; opt.innerText = label;
             filterMonthSelect.appendChild(opt);
 
             const item = document.createElement('div');
-            item.className = "month-item flex flex-col items-center justify-center p-3 rounded-2xl border border-slate-100 bg-white cursor-pointer transition-all hover:border-emerald-200 shadow-sm";
-            item.innerHTML = `<span class="text-[8px] opacity-40 font-black mb-0.5">${yearLabel}</span><span class="text-sm font-bold tracking-tight">${label}</span>`;
+            item.className = "month-item p-3 rounded-2xl border border-slate-100 bg-white cursor-pointer text-center transition-all hover:border-emerald-200";
+            item.innerHTML = `<span class="text-[10px] opacity-40 block">${d.getFullYear()}</span><span class="text-sm font-bold">${d.getMonth()+1}月</span>`;
             item.onclick = () => {
                 if(selectedMonths.includes(val)) {
                     selectedMonths = selectedMonths.filter(m => m !== val);
@@ -303,54 +178,41 @@
         }
     }
 
-    // 更新繳款人下拉選單
-    function updateMemberDropdown(memberList) {
-        const memberSelect = document.getElementById('memberSelect');
-        memberSelect.innerHTML = '<option value="">請選擇繳款人...</option>';
-        
-        if (!memberList || memberList.length === 0) {
-            memberSelect.innerHTML = '<option value="">無成員資料</option>';
-            return;
-        }
-
-        // 排序並過濾掉空值
-        MEMBERS = [...new Set(memberList)].filter(n => n).sort();
-        
-        MEMBERS.forEach(name => {
-            const opt = document.createElement('option');
-            opt.value = name; opt.innerText = name;
-            memberSelect.appendChild(opt);
-        });
-    }
-
     async function fetchData() {
         try {
             const resp = await fetch(API_URL);
             const data = await resp.json();
             
-            // 假設 GAS 端會傳回 { records: [...], members: [...] }
-            // 或者我們從 records 中提取所有人名
-            if (data.members) {
-                updateMemberDropdown(data.members);
-            } else if (data.length > 0) {
-                // 如果只傳回 records 陣列，則自動提取裡面出現過的名字
-                const extractedMembers = [...new Set(data.map(r => r.姓名))];
-                updateMemberDropdown(extractedMembers);
+            // 更新名單
+            if (data.members && data.members.length > 0) {
+                MEMBERS = [...new Set(data.members)].filter(n => n).sort();
+            } else if (Array.isArray(data)) {
+                MEMBERS = [...new Set(data.map(r => r.姓名))].filter(n => n).sort();
+            } else if (data.records) {
+                MEMBERS = [...new Set(data.records.map(r => r.姓名))].filter(n => n).sort();
             }
-            
+
+            const memberSelect = document.getElementById('memberSelect');
+            memberSelect.innerHTML = '<option value="">請選擇繳款人...</option>';
+            MEMBERS.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name; opt.innerText = name;
+                memberSelect.appendChild(opt);
+            });
+
             records = Array.isArray(data) ? data : (data.records || []);
             renderTable();
         } catch (e) { 
-            console.error("讀取失敗", e);
-            document.getElementById('memberSelect').innerHTML = '<option value="">載入失敗</option>';
+            console.error("載入失敗:", e);
+            document.getElementById('memberSelect').innerHTML = '<option value="">API 連線失敗</option>';
         }
     }
 
     async function submitData() {
-        if(!selectedMember || selectedMonths.length === 0) return alert("請完整填寫姓名與月份");
+        if(!selectedMember || selectedMonths.length === 0) return alert("請填寫姓名與月份");
         const btn = document.getElementById('submitBtn');
         btn.disabled = true;
-        btn.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i>傳送中...`;
+        btn.innerHTML = "傳送中...";
 
         const payload = {
             records: selectedMonths.map(m => ({
@@ -366,7 +228,7 @@
             alert("✅ 登記完成");
             location.reload();
         } catch (e) {
-            alert("錯誤，請再試一次");
+            alert("提交失敗，請檢查網路");
             btn.disabled = false;
             btn.innerHTML = "確認登記";
         }
@@ -389,7 +251,7 @@
         const tbody = document.getElementById('recordTableBody');
         
         let filtered = records.filter(r => {
-            const matchName = r.姓名.toString().toLowerCase().includes(nameQuery);
+            const matchName = r.姓名 && r.姓名.toString().toLowerCase().includes(nameQuery);
             const matchMonth = monthQuery === "" || r.費用年月 === monthQuery;
             return matchName && matchMonth;
         });
@@ -399,28 +261,18 @@
         tbody.innerHTML = filtered.map(r => {
             let formattedPayDate = "-";
             if(r.收款日期) {
-                try {
-                    const d = new Date(r.收款日期);
-                    formattedPayDate = `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`;
-                } catch(e) { formattedPayDate = r.收款日期; }
+                const d = new Date(r.收款日期);
+                formattedPayDate = !isNaN(d) ? `${d.getFullYear()}/${(d.getMonth()+1)}/${d.getDate()}` : r.收款日期;
             }
 
             return `
-            <tr class="group hover:bg-slate-50 transition-all">
-                <td class="px-8 py-5">
-                    <div class="font-bold text-slate-800 text-sm">${r.姓名}</div>
-                </td>
-                <td class="px-8 py-5">
-                    <span class="inline-flex px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">${r.費用年月}</span>
-                </td>
-                <td class="px-8 py-5 text-slate-500 text-xs font-medium">
-                    ${formattedPayDate}
-                </td>
-                <td class="px-8 py-5 text-right font-black text-slate-900 text-sm">NT$ ${r.金額}</td>
+            <tr class="hover:bg-slate-50 transition-all">
+                <td class="px-8 py-5 font-bold text-sm">${r.姓名}</td>
+                <td class="px-8 py-5"><span class="px-2 py-1 rounded bg-emerald-50 text-emerald-600 text-[10px] font-bold">${r.費用年月}</span></td>
+                <td class="px-8 py-5 text-slate-500 text-xs">${formattedPayDate}</td>
+                <td class="px-8 py-5 text-right font-black text-sm">NT$ ${r.金額}</td>
                 <td class="px-8 py-5 text-center">
-                    <button onclick="deleteRecord(${r.rowId})" class="text-slate-200 hover:text-red-500 transition-colors">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
+                    <button onclick="deleteRecord(${r.rowId})" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>
             `;
@@ -432,16 +284,10 @@
 
     function openPreview() {
         let targetYear = new Date().getFullYear();
-        const monthFilterVal = document.getElementById('filterMonth').value;
-        if (monthFilterVal) targetYear = monthFilterVal.split('-')[0];
-        
         currentReportData.year = targetYear;
-        document.getElementById('previewTitle').innerText = `${targetYear} 年度繳費總表`;
-
         const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
         currentReportData.pdfHeaders = ["姓名", ...months.map(m => `${parseInt(m)}月`)];
-        const headerHtml = currentReportData.pdfHeaders.map(h => `<th>${h}</th>`).join('');
-        document.getElementById('previewHeader').innerHTML = headerHtml;
+        document.getElementById('previewHeader').innerHTML = currentReportData.pdfHeaders.map(h => `<th>${h}</th>`).join('');
 
         let csvRows = [currentReportData.pdfHeaders.join(",")];
         let bodyHtml = "";
@@ -450,15 +296,12 @@
         MEMBERS.forEach(name => {
             const userRecords = records.filter(r => r.姓名 === name && r.費用年月.toString().startsWith(targetYear));
             let rowData = [name];
-            let rowHtml = `<td class="font-bold text-slate-700 bg-slate-50/50">${name}</td>`;
-
+            let rowHtml = `<td class="font-bold bg-slate-50">${name}</td>`;
             months.forEach(m => {
-                const key = `${targetYear}-${m}`;
-                const paid = userRecords.some(r => r.費用年月 === key);
+                const paid = userRecords.some(r => r.費用年月 === `${targetYear}-${m}`);
                 rowData.push(paid ? "V" : "-");
-                rowHtml += paid ? `<td class="status-v">V</td>` : `<td class="status-x">-</td>`;
+                rowHtml += paid ? `<td class="status-v">V</td>` : `<td>-</td>`;
             });
-
             csvRows.push(rowData.join(","));
             currentReportData.pdfRows.push(rowData);
             bodyHtml += `<tr>${rowHtml}</tr>`;
@@ -469,48 +312,20 @@
         document.getElementById('previewModal').style.display = 'flex';
     }
 
-    function closePreview() {
-        document.getElementById('previewModal').style.display = 'none';
-    }
-
+    function closePreview() { document.getElementById('previewModal').style.display = 'none'; }
     function downloadCSV() {
         const blob = new Blob([currentReportData.csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
+        a.href = URL.createObjectURL(blob);
         a.download = `${currentReportData.year}_Fee_Report.csv`;
         a.click();
     }
-
     function downloadPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('landscape');
-
-        doc.setFontSize(22);
-        doc.setTextColor(30, 41, 59);
-        doc.text(`${currentReportData.year} Fee Collection Report`, 14, 20);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
-
-        doc.autoTable({
-            startY: 35,
-            head: [currentReportData.pdfHeaders],
-            body: currentReportData.pdfRows,
-            theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 3, fontStyle: 'normal' },
-            headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' },
-            alternateRowStyles: { fillColor: [248, 250, 252] },
-            didParseCell: function(data) {
-                if (data.cell.text[0] === 'V') {
-                    data.cell.styles.textColor = [16, 185, 129];
-                    data.cell.styles.fontStyle = 'bold';
-                }
-            }
-        });
-
-        doc.save(`${currentReportData.year}_Cleaning_Fee_Report.pdf`);
+        doc.text(`${currentReportData.year} Fee Report`, 14, 20);
+        doc.autoTable({ startY: 30, head: [currentReportData.pdfHeaders], body: currentReportData.pdfRows });
+        doc.save(`${currentReportData.year}_Report.pdf`);
     }
 </script>
 
