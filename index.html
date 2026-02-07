@@ -6,8 +6,7 @@
     <title>EcoTech 掃地費管理系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --primary: #10b981;
@@ -35,6 +34,13 @@
             z-index: -1;
             opacity: 0.4;
             pointer-events: none;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
         }
     </style>
 </head>
@@ -97,7 +103,6 @@
                     <span class="p-2 bg-blue-100 rounded-lg text-blue-600">🕒</span> 24小時內紀錄
                 </h2>
                 <div id="recentRecords" class="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                    <!-- JS 生成紀錄卡片 -->
                     <div class="text-center text-gray-400 py-10 italic">載入資料中...</div>
                 </div>
             </section>
@@ -123,14 +128,18 @@
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6 pt-0">
-                <table class="w-full text-left">
+            <div id="pdfArea" class="flex-1 overflow-y-auto p-6 pt-0 bg-white">
+                <div class="hidden pdf-only-header py-4 text-center">
+                    <h1 class="text-2xl font-bold">掃地費管理報表</h1>
+                    <p class="text-sm text-gray-500">產出日期：<span id="exportDateSpan"></span></p>
+                </div>
+                <table id="recordTable" class="w-full text-left">
                     <thead class="sticky top-0 bg-white">
                         <tr class="text-gray-400 text-sm border-b uppercase">
-                            <th class="py-3 font-medium">姓名</th>
-                            <th class="py-3 font-medium">年月</th>
-                            <th class="py-3 font-medium">金額</th>
-                            <th class="py-3 font-medium">收費日</th>
+                            <th class="py-3 font-medium px-2">姓名</th>
+                            <th class="py-3 font-medium px-2">年月</th>
+                            <th class="py-3 font-medium px-2">金額</th>
+                            <th class="py-3 font-medium px-2">收費日</th>
                         </tr>
                     </thead>
                     <tbody id="queryResultBody" class="text-gray-600">
@@ -143,7 +152,7 @@
 
     <script>
         // --- 設定與初始化 ---
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5FWQw4ai_eYiAtLxOYbiGKxPvS8C3w8pb7PCBO0feqWidLgqLSN0AA-bpOwLQWPMFbQ/exec"; // 請在此填入您的 GAS 部署網址
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5FWQw4ai_eYiAtLxOYbiGKxPvS8C3w8pb7PCBO0feqWidLgqLSN0AA-bpOwLQWPMFbQ/exec"; 
         let allRecords = [];
         let userNames = [];
         let selectedMonths = [];
@@ -188,7 +197,6 @@
             const grid = document.getElementById('monthGrid');
             const now = new Date();
             for(let i=0; i<12; i++) {
-                const date = new Date(now.getFullYear(), i, 1);
                 const val = `${now.getFullYear()}-${(i+1).toString().padStart(2,'0')}`;
                 const btn = document.createElement('div');
                 btn.textContent = `${i+1}月`;
@@ -223,20 +231,16 @@
         }
 
         async function initData() {
-            if(!SCRIPT_URL) {
-                console.warn("未填寫 SCRIPT_URL");
-                return;
-            }
+            if(!SCRIPT_URL) return;
             const res = await callAPI({ action: 'getInitialData' });
             if(res) {
-                userNames = res.names;
-                allRecords = res.records;
+                userNames = res.names || [];
+                allRecords = res.records || [];
                 renderUI();
             }
         }
 
         function renderUI() {
-            // 填充下拉選單
             const userSelect = document.getElementById('userName');
             const querySelect = document.getElementById('queryName');
             userSelect.innerHTML = '<option value="">請選擇姓名...</option>';
@@ -247,7 +251,6 @@
                 querySelect.innerHTML += opt;
             });
 
-            // 渲染最近紀錄 (24H)
             const list = document.getElementById('recentRecords');
             const now = new Date();
             const recent = allRecords.filter(r => (now - new Date(r.timestamp)) < 24 * 60 * 60 * 1000)
@@ -263,7 +266,7 @@
                         <div class="text-xs text-gray-400">年月: ${r.months}</div>
                         <div class="text-xs text-emerald-500 font-medium">NT$ ${r.amount}</div>
                     </div>
-                    <button onclick="handleDelete('${r.id}')" class="text-red-300 hover:text-red-500 p-2 transition-colors">🗑️</button>
+                    <button onclick="handleDelete('${r.id}', this)" class="text-red-300 hover:text-red-500 p-2 transition-colors text-xl">🗑️</button>
                 `;
                 list.appendChild(card);
             });
@@ -271,7 +274,6 @@
             updateQueryResult();
         }
 
-        // --- 表單提交 ---
         document.getElementById('payForm').onsubmit = async (e) => {
             e.preventDefault();
             if(!selectedMonths.length) return alert('請選擇月份');
@@ -298,17 +300,25 @@
             }
         };
 
-        // --- 刪除功能 ---
-        async function handleDelete(id) {
+        async function handleDelete(id, btnElement) {
             if(!confirm('確定要刪除此筆最近紀錄嗎？')) return;
+            
+            btnElement.disabled = true;
+            btnElement.style.opacity = '0.5';
+            btnElement.textContent = '...';
+
             const res = await callAPI({ action: 'deleteRecord', id });
             if(res && res.success) {
                 allRecords = allRecords.filter(r => r.id !== id);
                 renderUI();
+            } else {
+                alert('刪除失敗，請檢查網路或 API 設定。');
+                btnElement.disabled = false;
+                btnElement.style.opacity = '1';
+                btnElement.textContent = '🗑️';
             }
         }
 
-        // --- 查詢與篩選 ---
         function updateQueryResult() {
             const nameFilt = document.getElementById('queryName').value;
             const monthFilt = document.getElementById('queryMonth').value;
@@ -324,10 +334,10 @@
             filtered.forEach(r => {
                 body.innerHTML += `
                     <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                        <td class="py-4 font-medium text-gray-700">${r.name}</td>
-                        <td class="py-4 text-sm">${r.months}</td>
-                        <td class="py-4 text-sm text-emerald-600 font-bold">$${r.amount}</td>
-                        <td class="py-4 text-sm text-gray-400">${r.date}</td>
+                        <td class="py-4 font-medium text-gray-700 px-2">${r.name}</td>
+                        <td class="py-4 text-sm px-2">${r.months}</td>
+                        <td class="py-4 text-sm text-emerald-600 font-bold px-2">$${r.amount}</td>
+                        <td class="py-4 text-sm text-gray-400 px-2">${r.date}</td>
                     </tr>
                 `;
             });
@@ -337,7 +347,6 @@
         document.getElementById('queryName').onchange = updateQueryResult;
         document.getElementById('queryMonth').oninput = updateQueryResult;
 
-        // --- 報表導出 ---
         function exportExcel() {
             const data = window.lastFiltered.map(r => ({
                 '繳款人': r.name,
@@ -356,7 +365,6 @@
             const header = element.querySelector('.pdf-only-header');
             const dateSpan = document.getElementById('exportDateSpan');
             
-            // 顯示標題與日期
             header.classList.remove('hidden');
             dateSpan.textContent = new Date().toLocaleString();
 
@@ -368,10 +376,14 @@
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            // 執行轉換
             html2pdf().set(opt).from(element).save().then(() => {
-                header.classList.add('hidden'); // 完成後隱藏標題
+                header.classList.add('hidden');
             });
+        }
+
+        function toggleQueryModal() {
+            const modal = document.getElementById('queryModal');
+            modal.classList.toggle('hidden');
         }
 
         window.onload = () => {
