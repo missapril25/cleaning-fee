@@ -84,7 +84,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-2">收費年月 (可複選，含今去年)</label>
+                        <label class="block text-sm font-medium text-gray-500 mb-2">收費年月 (可複選)</label>
                         <!-- 新增固定高度與滾輪 -->
                         <div id="monthGridContainer" class="max-h-48 overflow-y-auto pr-2 custom-scrollbar border border-gray-50 rounded-xl p-2 bg-white/50">
                             <div id="monthGrid" class="grid grid-cols-3 gap-2">
@@ -269,15 +269,17 @@
                     const val = `${year}-${(i+1).toString().padStart(2,'0')}`;
                     const btn = document.createElement('div');
                     btn.textContent = `${i+1}月`;
-                    btn.className = "cursor-pointer border border-gray-100 rounded-lg py-2 text-center text-sm hover:border-emerald-300 transition-all bg-white";
+                    btn.className = "cursor-pointer border border-gray-100 rounded-lg py-2 text-center text-sm hover:border-emerald-300 transition-all bg-white text-gray-600";
                     btn.dataset.val = val;
                     btn.onclick = () => {
                         if(selectedMonths.includes(val)) {
                             selectedMonths = selectedMonths.filter(m => m !== val);
                             btn.classList.remove('bg-emerald-500', 'text-white', 'border-emerald-500');
+                            btn.classList.add('bg-white', 'text-gray-600', 'border-gray-100');
                         } else {
                             selectedMonths.push(val);
                             btn.classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
+                            btn.classList.remove('bg-white', 'text-gray-600', 'border-gray-100');
                         }
                         document.getElementById('displayAmount').textContent = selectedMonths.length * 200;
                     };
