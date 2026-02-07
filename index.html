@@ -3,331 +3,377 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>掃地費登記小幫手</title>
+    <title>EcoTech 掃地費管理系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Noto+Sans+TC:wght@300;400;700&display=swap');
-        :root { --accent: #10b981; --bg-base: #f8fafc; }
-        body { font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif; background-color: var(--bg-base); color: #1e293b; min-height: 100vh; }
-        .bg-mesh { position: fixed; inset: 0; z-index: -10; background-image: radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.05) 0px, transparent 50%); }
-        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.02); }
-        .btn-gradient { background: linear-gradient(135deg, #10b981 0%, #0d9488 100%); transition: all 0.3s ease; }
-        .month-item.selected { border-color: #10b981; background-color: #10b981; color: white; }
-        #previewModal { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(12px); }
-        .preview-table th { background-color: #f8fafc; font-size: 10px; padding: 12px 4px; border: 1px solid #f1f5f9; color: #64748b; }
-        .preview-table td { font-size: 12px; padding: 10px 4px; text-align: center; border: 1px solid #f1f5f9; }
-        .status-v { color: #10b981; font-weight: 700; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        :root {
+            --primary: #10b981;
+            --secondary: #3b82f6;
+        }
+        body {
+            background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%);
+            min-height: 100vh;
+            font-family: "Microsoft JhengHei", sans-serif;
+        }
+        .eco-gradient {
+            background: linear-gradient(90deg, #10b981, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+        }
+        .dynamic-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+            pointer-events: none;
+        }
     </style>
 </head>
-<body class="p-4 md:p-10">
+<body class="p-4 md:p-8">
+    <canvas id="bgCanvas" class="dynamic-bg"></canvas>
 
-<div class="bg-mesh"></div>
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold eco-gradient">EcoTech 掃地費管理</h1>
+            <button onclick="toggleQueryModal()" class="bg-white border-2 border-emerald-500 text-emerald-600 px-6 py-2 rounded-full hover:bg-emerald-500 hover:text-white transition-all font-medium flex items-center gap-2">
+                🔍 查詢與報表
+            </button>
+        </header>
 
-<div id="app" class="max-w-7xl mx-auto relative z-10">
-    <header class="flex flex-col items-center mb-12 text-center">
-        <div class="inline-block px-4 py-1.5 mb-2 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-black tracking-widest uppercase">Database Connected</div>
-        <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 tracking-tight">掃地費<span class="text-transparent bg-clip-text bg-gradient-to-br from-emerald-400 to-teal-600">登記小幫手</span></h1>
-    </header>
-
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <!-- 左側：交互表單 -->
-        <div class="lg:col-span-4 space-y-6">
-            <div class="glass-card p-6 md:p-8 rounded-[3rem]">
-                <h2 class="text-lg font-extrabold mb-8 flex items-center gap-3">
-                    <span class="w-1.5 h-6 bg-gradient-to-b from-emerald-400 to-teal-500 rounded-full"></span>
-                    費用登記
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- 收費登記頁面 -->
+            <section class="glass-card p-6 rounded-3xl">
+                <h2 class="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+                    <span class="p-2 bg-emerald-100 rounded-lg text-emerald-600">📝</span> 新增收費登記
                 </h2>
-                <div class="space-y-6">
-                    <div class="space-y-2">
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">繳款人姓名</label>
-                        <select id="memberSelect" onchange="selectedMember = this.value" class="w-full bg-white/50 border border-slate-100 rounded-2xl px-4 py-4 outline-none font-semibold shadow-sm focus:ring-4 focus:ring-emerald-500/5 transition-all">
-                            <option value="">請先填寫 API 網址...</option>
+                
+                <form id="payForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">繳款人姓名</label>
+                        <select id="userName" class="w-full border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none shadow-sm" required>
+                            <option value="">請選擇姓名...</option>
                         </select>
                     </div>
-                    <div class="space-y-3">
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">費用年月 (多選)</label>
-                        <div id="monthGrid" class="grid grid-cols-3 gap-2.5 max-h-52 overflow-y-auto custom-scrollbar pr-1"></div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-2">收費年月 (可複選)</label>
+                        <div id="monthGrid" class="grid grid-cols-3 gap-2">
+                            <!-- JS 生成月份按鈕 -->
+                        </div>
                     </div>
-                    <div class="space-y-2">
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">收款日期</label>
-                        <input type="date" id="payDate" class="w-full bg-white/50 border border-slate-100 rounded-2xl px-4 py-4 outline-none font-semibold text-slate-600 shadow-sm">
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">金額 (固定)</label>
+                        <div class="flex items-center gap-2 text-2xl font-bold text-emerald-600">
+                            NT$ <span id="displayAmount">0</span>
+                        </div>
+                        <p class="text-xs text-gray-400">※ 每月固定 200 元</p>
                     </div>
-                    <button id="submitBtn" onclick="submitData()" class="btn-gradient w-full text-white font-black py-4 rounded-2xl transition-all text-sm tracking-widest">確認登記</button>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">收費日期</label>
+                        <input type="date" id="payDate" class="w-full border-gray-200 rounded-xl p-3 outline-none" required>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-600 shadow-lg shadow-emerald-200 transition-all transform active:scale-95">
+                        確認登記
+                    </button>
+                </form>
+            </section>
+
+            <!-- 最近收費紀錄 (24H) -->
+            <section class="glass-card p-6 rounded-3xl">
+                <h2 class="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+                    <span class="p-2 bg-blue-100 rounded-lg text-blue-600">🕒</span> 24小時內紀錄
+                </h2>
+                <div id="recentRecords" class="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                    <!-- JS 生成紀錄卡片 -->
+                    <div class="text-center text-gray-400 py-10 italic">載入資料中...</div>
                 </div>
-            </div>
+            </section>
         </div>
+    </div>
 
-        <!-- 右側：數據儀表板 -->
-        <div class="lg:col-span-8 space-y-8">
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
-                <div class="glass-card p-6 rounded-[2.5rem]">
-                    <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">收費總金額</p>
-                    <h3 class="text-3xl font-extrabold text-slate-900" id="totalAmount">0</h3>
-                </div>
-                <div class="glass-card p-6 rounded-[2.5rem]">
-                    <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">總筆數</p>
-                    <h3 class="text-3xl font-extrabold text-slate-900" id="totalCount">0</h3>
-                </div>
-                <div class="p-6 rounded-[2.5rem] bg-slate-900 text-white flex flex-col justify-center">
-                    <p class="opacity-50 text-[10px] font-black uppercase tracking-widest mb-1">每月金額</p>
-                    <h3 class="text-2xl font-extrabold">NT$ 200</h3>
+    <!-- 查詢 Modal -->
+    <div id="queryModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-emerald-50">
+                <h3 class="text-xl font-bold text-emerald-800">查詢紀錄與報表導出</h3>
+                <button onclick="toggleQueryModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white">
+                <select id="queryName" class="border rounded-xl p-2 outline-none focus:ring-2 focus:ring-emerald-500">
+                    <option value="">所有姓名</option>
+                </select>
+                <input type="month" id="queryMonth" class="border rounded-xl p-2 outline-none">
+                <div class="flex gap-2">
+                    <button onclick="exportExcel()" class="flex-1 bg-green-100 text-green-700 px-3 py-2 rounded-xl text-sm font-bold hover:bg-green-200 transition-all">Excel</button>
+                    <button onclick="exportPDF()" class="flex-1 bg-red-100 text-red-700 px-3 py-2 rounded-xl text-sm font-bold hover:bg-red-200 transition-all">PDF</button>
                 </div>
             </div>
 
-            <div class="glass-card rounded-[3rem] overflow-hidden">
-                <div class="p-8 border-b flex justify-between items-center bg-white/50">
-                    <h3 class="text-xl font-black text-slate-800">收款明細紀錄</h3>
-                    <button onclick="openPreview()" class="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-xs font-black">年度總表</button>
-                </div>
-                <div class="px-8 py-4 bg-slate-50/50 flex gap-4">
-                    <input type="text" id="searchInput" oninput="renderTable()" placeholder="搜尋姓名..." class="flex-1 bg-white border border-slate-100 rounded-xl px-4 py-2 text-xs outline-none">
-                    <select id="filterMonth" onchange="renderTable()" class="bg-white border border-slate-100 rounded-xl px-4 py-2 text-xs outline-none"></select>
-                </div>
-                <div class="overflow-x-auto custom-scrollbar">
-                    <table class="w-full text-left min-w-[600px]">
-                        <thead>
-                            <tr class="text-slate-400 text-[10px] uppercase font-black">
-                                <th class="px-8 py-4">繳款人</th>
-                                <th class="px-8 py-4">費用年月</th>
-                                <th class="px-8 py-4">收款日期</th>
-                                <th class="px-8 py-4 text-right">金額</th>
-                                <th class="px-8 py-4 text-center">刪除</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recordTableBody" class="divide-y divide-slate-50"></tbody>
-                    </table>
-                </div>
+            <div class="flex-1 overflow-y-auto p-6 pt-0">
+                <table class="w-full text-left">
+                    <thead class="sticky top-0 bg-white">
+                        <tr class="text-gray-400 text-sm border-b uppercase">
+                            <th class="py-3 font-medium">姓名</th>
+                            <th class="py-3 font-medium">年月</th>
+                            <th class="py-3 font-medium">金額</th>
+                            <th class="py-3 font-medium">收費日</th>
+                        </tr>
+                    </thead>
+                    <tbody id="queryResultBody" class="text-gray-600">
+                        <!-- JS 動態渲染 -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-</div>
 
-<div id="previewModal" class="flex items-center justify-center p-6">
-    <div class="bg-white w-full max-w-5xl max-h-[85vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden">
-        <div class="p-8 border-b flex justify-between items-center">
-            <h3 class="text-2xl font-black" id="previewTitle">年度繳費總表</h3>
-            <button onclick="closePreview()" class="text-slate-400 text-2xl">&times;</button>
-        </div>
-        <div class="flex-1 overflow-auto p-8 bg-slate-50/30">
-            <table class="w-full preview-table bg-white rounded-2xl overflow-hidden" id="tableForPDF">
-                <thead><tr id="previewHeader"></tr></thead>
-                <tbody id="previewBody"></tbody>
-            </table>
-        </div>
-        <div class="p-8 border-t flex gap-4">
-            <button onclick="downloadCSV()" class="flex-1 py-4 bg-emerald-50 text-emerald-600 font-bold rounded-2xl">CSV 下載</button>
-            <button onclick="downloadPDF()" class="flex-1 py-4 btn-gradient text-white font-bold rounded-2xl">PDF 下載</button>
-        </div>
-    </div>
-</div>
+    <script>
+        // --- 設定與初始化 ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5FWQw4ai_eYiAtLxOYbiGKxPvS8C3w8pb7PCBO0feqWidLgqLSN0AA-bpOwLQWPMFbQ/exec"; // 請在此填入您的 GAS 部署網址
+        let allRecords = [];
+        let userNames = [];
+        let selectedMonths = [];
 
-<script>
-    // --- 請在這裡填入你的 Google Apps Script 部署網址 ---
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxCbfV9gMe3eRDzSNiGo39gpgbUPVKr7Tjj5eJeapmahQj3cqvXm2LRzyidknr7sZJXyg/exec'; 
-    
-    let MEMBERS = []; 
-    const MONTHLY_FEE = 200;
-    let records = [];
-    let selectedMember = "";
-    let selectedMonths = [];
-    let currentReportData = { year: "", csv: "", pdfRows: [], pdfHeaders: [] };
-
-    window.onload = () => {
-        document.getElementById('payDate').valueAsDate = new Date();
-        initMonths();
-        if(API_URL.includes('exec')) {
-            fetchData();
-        } else {
-            document.getElementById('memberSelect').innerHTML = '<option value="">請填寫 API 網址</option>';
-        }
-    };
-
-    function initMonths() {
-        const monthGrid = document.getElementById('monthGrid');
-        const filterMonthSelect = document.getElementById('filterMonth');
-        filterMonthSelect.innerHTML = '<option value="">所有月份</option>';
-        const now = new Date();
-        for (let i = -5; i < 12; i++) {
-            const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-            const val = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`;
-            const label = `${d.getFullYear()}/${d.getMonth()+1}月`;
-            
-            const opt = document.createElement('option');
-            opt.value = val; opt.innerText = label;
-            filterMonthSelect.appendChild(opt);
-
-            const item = document.createElement('div');
-            item.className = "month-item p-3 rounded-2xl border border-slate-100 bg-white cursor-pointer text-center transition-all hover:border-emerald-200";
-            item.innerHTML = `<span class="text-[10px] opacity-40 block">${d.getFullYear()}</span><span class="text-sm font-bold">${d.getMonth()+1}月</span>`;
-            item.onclick = () => {
-                if(selectedMonths.includes(val)) {
-                    selectedMonths = selectedMonths.filter(m => m !== val);
-                    item.classList.remove('selected');
-                } else {
-                    selectedMonths.push(val);
-                    item.classList.add('selected');
-                }
-            };
-            monthGrid.appendChild(item);
-        }
-    }
-
-    async function fetchData() {
-        try {
-            const resp = await fetch(API_URL);
-            const data = await resp.json();
-            
-            // 更新名單
-            if (data.members && data.members.length > 0) {
-                MEMBERS = [...new Set(data.members)].filter(n => n).sort();
-            } else if (Array.isArray(data)) {
-                MEMBERS = [...new Set(data.map(r => r.姓名))].filter(n => n).sort();
-            } else if (data.records) {
-                MEMBERS = [...new Set(data.records.map(r => r.姓名))].filter(n => n).sort();
+        // --- 背景動畫 ---
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        function initBg() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            particles = [];
+            for(let i=0; i<30; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    r: Math.random() * 5 + 2,
+                    dx: (Math.random() - 0.5) * 0.5,
+                    dy: (Math.random() - 0.5) * 0.5,
+                    opacity: Math.random() * 0.5
+                });
             }
+        }
+        function animate() {
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+                ctx.fillStyle = `rgba(16, 185, 129, ${p.opacity})`;
+                ctx.fill();
+                p.x += p.dx; p.y += p.dy;
+                if(p.x < 0 || p.x > canvas.width) p.dx *= -1;
+                if(p.y < 0 || p.y > canvas.height) p.dy *= -1;
+            });
+            requestAnimationFrame(animate);
+        }
+        window.addEventListener('resize', initBg);
+        initBg(); animate();
 
-            const memberSelect = document.getElementById('memberSelect');
-            memberSelect.innerHTML = '<option value="">請選擇繳款人...</option>';
-            MEMBERS.forEach(name => {
-                const opt = document.createElement('option');
-                opt.value = name; opt.innerText = name;
-                memberSelect.appendChild(opt);
+        // --- 月份選取器生成 ---
+        function generateMonthGrid() {
+            const grid = document.getElementById('monthGrid');
+            const now = new Date();
+            for(let i=0; i<12; i++) {
+                const date = new Date(now.getFullYear(), i, 1);
+                const val = `${now.getFullYear()}-${(i+1).toString().padStart(2,'0')}`;
+                const btn = document.createElement('div');
+                btn.textContent = `${i+1}月`;
+                btn.className = "cursor-pointer border border-gray-100 rounded-lg py-2 text-center text-sm hover:border-emerald-300 transition-all";
+                btn.dataset.val = val;
+                btn.onclick = () => {
+                    if(selectedMonths.includes(val)) {
+                        selectedMonths = selectedMonths.filter(m => m !== val);
+                        btn.classList.remove('bg-emerald-500', 'text-white', 'border-emerald-500');
+                    } else {
+                        selectedMonths.push(val);
+                        btn.classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
+                    }
+                    document.getElementById('displayAmount').textContent = selectedMonths.length * 200;
+                };
+                grid.appendChild(btn);
+            }
+        }
+
+        // --- API 通訊 ---
+        async function callAPI(data) {
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                return await response.json();
+            } catch (e) {
+                console.error("API Error", e);
+                return null;
+            }
+        }
+
+        async function initData() {
+            if(!SCRIPT_URL) {
+                console.warn("未填寫 SCRIPT_URL");
+                return;
+            }
+            const res = await callAPI({ action: 'getInitialData' });
+            if(res) {
+                userNames = res.names;
+                allRecords = res.records;
+                renderUI();
+            }
+        }
+
+        function renderUI() {
+            // 填充下拉選單
+            const userSelect = document.getElementById('userName');
+            const querySelect = document.getElementById('queryName');
+            userSelect.innerHTML = '<option value="">請選擇姓名...</option>';
+            querySelect.innerHTML = '<option value="">所有姓名</option>';
+            userNames.forEach(name => {
+                const opt = `<option value="${name}">${name}</option>`;
+                userSelect.innerHTML += opt;
+                querySelect.innerHTML += opt;
             });
 
-            records = Array.isArray(data) ? data : (data.records || []);
-            renderTable();
-        } catch (e) { 
-            console.error("載入失敗:", e);
-            document.getElementById('memberSelect').innerHTML = '<option value="">API 連線失敗</option>';
+            // 渲染最近紀錄 (24H)
+            const list = document.getElementById('recentRecords');
+            const now = new Date();
+            const recent = allRecords.filter(r => (now - new Date(r.timestamp)) < 24 * 60 * 60 * 1000)
+                                    .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            list.innerHTML = recent.length ? '' : '<div class="text-center text-gray-400 py-10 italic">24小時內無新紀錄</div>';
+            recent.forEach(r => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm border border-gray-50 animate-fade-in";
+                card.innerHTML = `
+                    <div>
+                        <div class="font-bold text-gray-700">${r.name}</div>
+                        <div class="text-xs text-gray-400">年月: ${r.months}</div>
+                        <div class="text-xs text-emerald-500 font-medium">NT$ ${r.amount}</div>
+                    </div>
+                    <button onclick="handleDelete('${r.id}')" class="text-red-300 hover:text-red-500 p-2 transition-colors">🗑️</button>
+                `;
+                list.appendChild(card);
+            });
+
+            updateQueryResult();
         }
-    }
 
-    async function submitData() {
-        if(!selectedMember || selectedMonths.length === 0) return alert("請填寫姓名與月份");
-        const btn = document.getElementById('submitBtn');
-        btn.disabled = true;
-        btn.innerHTML = "傳送中...";
+        // --- 表單提交 ---
+        document.getElementById('payForm').onsubmit = async (e) => {
+            e.preventDefault();
+            if(!selectedMonths.length) return alert('請選擇月份');
+            
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = "處理中...";
 
-        const payload = {
-            records: selectedMonths.map(m => ({
-                name: selectedMember,
-                targetMonth: m,
-                payDate: document.getElementById('payDate').value,
-                amount: MONTHLY_FEE
-            }))
+            const data = {
+                name: document.getElementById('userName').value,
+                months: selectedMonths,
+                amount: selectedMonths.length * 200,
+                date: document.getElementById('payDate').value
+            };
+
+            const res = await callAPI({ action: 'addRecord', data });
+            if(res && res.success) {
+                alert('登記成功！');
+                location.reload();
+            } else {
+                alert('提交失敗，請檢查 URL 或網路設定。');
+                btn.disabled = false;
+                btn.textContent = "確認登記";
+            }
         };
 
-        try {
-            await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
-            alert("✅ 登記完成");
-            location.reload();
-        } catch (e) {
-            alert("提交失敗，請檢查網路");
-            btn.disabled = false;
-            btn.innerHTML = "確認登記";
-        }
-    }
-
-    async function deleteRecord(rowId) {
-        if(!confirm("確定刪除此筆記錄？")) return;
-        try {
-            await fetch(API_URL, { 
-                method: 'POST', 
-                body: JSON.stringify({ method: 'DELETE', rowId: rowId }) 
-            });
-            fetchData();
-        } catch (e) { alert("刪除失敗"); }
-    }
-
-    function renderTable() {
-        const nameQuery = document.getElementById('searchInput').value.toLowerCase();
-        const monthQuery = document.getElementById('filterMonth').value;
-        const tbody = document.getElementById('recordTableBody');
-        
-        let filtered = records.filter(r => {
-            const matchName = r.姓名 && r.姓名.toString().toLowerCase().includes(nameQuery);
-            const matchMonth = monthQuery === "" || r.費用年月 === monthQuery;
-            return matchName && matchMonth;
-        });
-
-        filtered.sort((a, b) => b.費用年月.localeCompare(a.費用年月));
-
-        tbody.innerHTML = filtered.map(r => {
-            let formattedPayDate = "-";
-            if(r.收款日期) {
-                const d = new Date(r.收款日期);
-                formattedPayDate = !isNaN(d) ? `${d.getFullYear()}/${(d.getMonth()+1)}/${d.getDate()}` : r.收款日期;
+        // --- 刪除功能 ---
+        async function handleDelete(id) {
+            if(!confirm('確定要刪除此筆最近紀錄嗎？')) return;
+            const res = await callAPI({ action: 'deleteRecord', id });
+            if(res && res.success) {
+                allRecords = allRecords.filter(r => r.id !== id);
+                renderUI();
             }
+        }
 
-            return `
-            <tr class="hover:bg-slate-50 transition-all">
-                <td class="px-8 py-5 font-bold text-sm">${r.姓名}</td>
-                <td class="px-8 py-5"><span class="px-2 py-1 rounded bg-emerald-50 text-emerald-600 text-[10px] font-bold">${r.費用年月}</span></td>
-                <td class="px-8 py-5 text-slate-500 text-xs">${formattedPayDate}</td>
-                <td class="px-8 py-5 text-right font-black text-sm">NT$ ${r.金額}</td>
-                <td class="px-8 py-5 text-center">
-                    <button onclick="deleteRecord(${r.rowId})" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
-                </td>
-            </tr>
-            `;
-        }).join('');
-
-        document.getElementById('totalAmount').innerText = filtered.reduce((acc, curr) => acc + Number(curr.金額), 0).toLocaleString();
-        document.getElementById('totalCount').innerText = filtered.length;
-    }
-
-    function openPreview() {
-        let targetYear = new Date().getFullYear();
-        currentReportData.year = targetYear;
-        const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
-        currentReportData.pdfHeaders = ["姓名", ...months.map(m => `${parseInt(m)}月`)];
-        document.getElementById('previewHeader').innerHTML = currentReportData.pdfHeaders.map(h => `<th>${h}</th>`).join('');
-
-        let csvRows = [currentReportData.pdfHeaders.join(",")];
-        let bodyHtml = "";
-        currentReportData.pdfRows = [];
-
-        MEMBERS.forEach(name => {
-            const userRecords = records.filter(r => r.姓名 === name && r.費用年月.toString().startsWith(targetYear));
-            let rowData = [name];
-            let rowHtml = `<td class="font-bold bg-slate-50">${name}</td>`;
-            months.forEach(m => {
-                const paid = userRecords.some(r => r.費用年月 === `${targetYear}-${m}`);
-                rowData.push(paid ? "V" : "-");
-                rowHtml += paid ? `<td class="status-v">V</td>` : `<td>-</td>`;
+        // --- 查詢與篩選 ---
+        function updateQueryResult() {
+            const nameFilt = document.getElementById('queryName').value;
+            const monthFilt = document.getElementById('queryMonth').value;
+            
+            const filtered = allRecords.filter(r => {
+                const matchName = !nameFilt || r.name === nameFilt;
+                const matchMonth = !monthFilt || r.months.includes(monthFilt);
+                return matchName && matchMonth;
             });
-            csvRows.push(rowData.join(","));
-            currentReportData.pdfRows.push(rowData);
-            bodyHtml += `<tr>${rowHtml}</tr>`;
-        });
 
-        currentReportData.csv = "\ufeff" + csvRows.join("\n");
-        document.getElementById('previewBody').innerHTML = bodyHtml;
-        document.getElementById('previewModal').style.display = 'flex';
-    }
+            const body = document.getElementById('queryResultBody');
+            body.innerHTML = '';
+            filtered.forEach(r => {
+                body.innerHTML += `
+                    <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                        <td class="py-4 font-medium text-gray-700">${r.name}</td>
+                        <td class="py-4 text-sm">${r.months}</td>
+                        <td class="py-4 text-sm text-emerald-600 font-bold">$${r.amount}</td>
+                        <td class="py-4 text-sm text-gray-400">${r.date}</td>
+                    </tr>
+                `;
+            });
+            window.lastFiltered = filtered;
+        }
 
-    function closePreview() { document.getElementById('previewModal').style.display = 'none'; }
-    function downloadCSV() {
-        const blob = new Blob([currentReportData.csv], { type: 'text/csv;charset=utf-8;' });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `${currentReportData.year}_Fee_Report.csv`;
-        a.click();
-    }
-    function downloadPDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('landscape');
-        doc.text(`${currentReportData.year} Fee Report`, 14, 20);
-        doc.autoTable({ startY: 30, head: [currentReportData.pdfHeaders], body: currentReportData.pdfRows });
-        doc.save(`${currentReportData.year}_Report.pdf`);
-    }
-</script>
+        document.getElementById('queryName').onchange = updateQueryResult;
+        document.getElementById('queryMonth').oninput = updateQueryResult;
 
+        // --- 報表導出 ---
+        function exportExcel() {
+            const data = window.lastFiltered.map(r => ({
+                '繳款人': r.name,
+                '收費年月': r.months,
+                '總金額': r.amount,
+                '收費日期': r.date
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "收費紀錄");
+            XLSX.writeFile(wb, `掃地費報表_${new Date().toLocaleDateString()}.xlsx`);
+        }
+
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("掃地費管理報表", 14, 15);
+            const tableData = window.lastFiltered.map(r => [r.name, r.months, r.amount, r.date]);
+            doc.autoTable({
+                head: [['姓名', '年月', '金額', '日期']],
+                body: tableData,
+                startY: 20,
+            });
+            doc.save(`掃地費報表_${new Date().toLocaleDateString()}.pdf`);
+        }
+
+        // --- UI 控制 ---
+        function toggleQueryModal() {
+            document.getElementById('queryModal').classList.toggle('hidden');
+        }
+
+        window.onload = () => {
+            generateMonthGrid();
+            document.getElementById('payDate').valueAsDate = new Date();
+            initData();
+        };
+    </script>
 </body>
 </html>
