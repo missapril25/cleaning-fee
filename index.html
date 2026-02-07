@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EcoTech 掃地費管理系統</title>
+    <title>掃地費小幫手</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -50,7 +50,7 @@
     <div class="max-w-4xl mx-auto">
         <!-- Header -->
         <header class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold eco-gradient">EcoTech 掃地費管理</h1>
+            <h1 class="text-3xl font-bold eco-gradient">掃地費小幫手</h1>
             <button onclick="toggleQueryModal()" class="bg-white border-2 border-emerald-500 text-emerald-600 px-6 py-2 rounded-full hover:bg-emerald-500 hover:text-white transition-all font-medium flex items-center gap-2">
                 🔍 查詢與報表
             </button>
@@ -79,11 +79,11 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">金額 (固定)</label>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">單月費用</label>
                         <div class="flex items-center gap-2 text-2xl font-bold text-emerald-600">
-                            NT$ <span id="displayAmount">0</span>
+                            NT$ 200
                         </div>
-                        <p class="text-xs text-gray-400">※ 每月固定 200 元</p>
+                        <p class="text-xs text-gray-400">總計：NT$ <span id="displayAmount">0</span></p>
                     </div>
 
                     <div>
@@ -113,7 +113,7 @@
     <div id="queryModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-emerald-50">
-                <h3 class="text-xl font-bold text-emerald-800">查詢紀錄與報表導出</h3>
+                <h3 class="text-xl font-bold text-emerald-800">收費記錄查詢與報表下載</h3>
                 <button onclick="toggleQueryModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
             
@@ -130,7 +130,7 @@
 
             <div id="pdfArea" class="flex-1 overflow-y-auto p-6 pt-0 bg-white">
                 <div class="hidden pdf-only-header py-4 text-center">
-                    <h1 class="text-2xl font-bold">掃地費管理報表</h1>
+                    <h1 class="text-2xl font-bold"><span id="pdfYearTitle"></span>管理報表</h1>
                     <p class="text-sm text-gray-500">產出日期：<span id="exportDateSpan"></span></p>
                 </div>
                 <table id="recordTable" class="w-full text-left">
@@ -193,17 +193,15 @@
         initBg(); animate();
 
         // --- 輔助函式：日期顯示格式化 ---
-        // 將 YYYY-MM 或 ISO 字串轉換為 "YYYY年 M月"
         function formatMonthDisplay(monthStr) {
             if (!monthStr) return "";
             try {
-                // 如果是 ISO 格式，先轉成日期對象
-                const date = new Date(monthStr);
-                if (!isNaN(date.getTime())) {
-                    // 使用當地時間取得年月，避免時區偏移導致月份錯誤
-                    return `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
+                if (monthStr.includes('T') && monthStr.includes('Z')) {
+                    const date = new Date(monthStr);
+                    if (!isNaN(date.getTime())) {
+                        return `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
+                    }
                 }
-                // 如果是單純的 YYYY-MM 格式字串
                 const parts = monthStr.split('-');
                 if (parts.length >= 2) {
                     return `${parts[0]}年 ${parseInt(parts[1], 10)}月`;
@@ -214,7 +212,22 @@
             }
         }
 
-        // 將複數月份字串格式化顯示
+        // 格式化收費日期為 YYYY-MM-DD
+        function formatSimpleDate(dateStr) {
+            if (!dateStr) return "";
+            try {
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return dateStr;
+                // 轉為 ISO 字串取前 10 位，或手動拼接確保時區無虞
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
         function formatMonthsList(monthsStr) {
             if (!monthsStr) return "";
             return monthsStr.split(',').map(m => formatMonthDisplay(m.trim())).join(', ');
@@ -225,7 +238,6 @@
             const grid = document.getElementById('monthGrid');
             const now = new Date();
             for(let i=0; i<12; i++) {
-                const date = new Date(now.getFullYear(), i, 1);
                 const val = `${now.getFullYear()}-${(i+1).toString().padStart(2,'0')}`;
                 const btn = document.createElement('div');
                 btn.textContent = `${i+1}月`;
@@ -308,53 +320,71 @@
             if(!selectedMonths.length) return alert('請選擇月份');
             
             const btn = document.getElementById('submitBtn');
+            const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = "處理中...";
+            
+            const name = document.getElementById('userName').value;
+            const payDate = document.getElementById('payDate').value;
 
-            const data = {
-                name: document.getElementById('userName').value,
-                months: selectedMonths,
-                amount: selectedMonths.length * 200,
-                date: document.getElementById('payDate').value
-            };
+            let successCount = 0;
+            for (let i = 0; i < selectedMonths.length; i++) {
+                const month = selectedMonths[i];
+                btn.textContent = `處理中 (${i + 1}/${selectedMonths.length})...`;
+                
+                const data = {
+                    name: name,
+                    months: [month],
+                    amount: 200,
+                    date: payDate
+                };
 
-            const res = await callAPI({ action: 'addRecord', data });
-            if(res && res.success) {
-                alert('登記成功！');
+                const res = await callAPI({ action: 'addRecord', data });
+                if(res && res.success) successCount++;
+            }
+
+            if(successCount === selectedMonths.length) {
+                alert(`成功登記 ${successCount} 個月份！`);
                 location.reload();
             } else {
-                alert('提交失敗，請檢查 URL 或網路設定。');
+                alert(`登記完成，但部分失敗 (成功: ${successCount}/${selectedMonths.length})。請檢查網路。`);
                 btn.disabled = false;
-                btn.textContent = "確認登記";
+                btn.textContent = originalText;
             }
         };
 
         async function handleDelete(id, btnElement) {
             if(!confirm('確定要刪除此筆最近紀錄嗎？')) return;
-            
             btnElement.disabled = true;
             btnElement.style.opacity = '0.5';
-            btnElement.textContent = '...';
-
             const res = await callAPI({ action: 'deleteRecord', id });
             if(res && res.success) {
                 allRecords = allRecords.filter(r => r.id !== id);
                 renderUI();
             } else {
-                alert('刪除失敗，請檢查網路或 API 設定。');
+                alert('刪除失敗。');
                 btnElement.disabled = false;
                 btnElement.style.opacity = '1';
-                btnElement.textContent = '🗑️';
             }
         }
 
         function updateQueryResult() {
             const nameFilt = document.getElementById('queryName').value;
-            const monthFilt = document.getElementById('queryMonth').value;
+            const monthFilt = document.getElementById('queryMonth').value; 
             
             const filtered = allRecords.filter(r => {
                 const matchName = !nameFilt || r.name === nameFilt;
-                const matchMonth = !monthFilt || r.months.includes(monthFilt);
+                let matchMonth = true;
+                if (monthFilt) {
+                    const monthsArray = r.months.split(',').map(m => m.trim());
+                    matchMonth = monthsArray.some(m => {
+                        let normalizedM = m;
+                        if (m.includes('T')) {
+                            const d = new Date(m);
+                            normalizedM = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+                        }
+                        return normalizedM === monthFilt;
+                    });
+                }
                 return matchName && matchMonth;
             });
 
@@ -366,7 +396,7 @@
                         <td class="py-4 font-medium text-gray-700 px-2">${r.name}</td>
                         <td class="py-4 text-sm px-2">${formatMonthsList(r.months)}</td>
                         <td class="py-4 text-sm text-emerald-600 font-bold px-2">$${r.amount}</td>
-                        <td class="py-4 text-sm text-gray-400 px-2">${r.date}</td>
+                        <td class="py-4 text-sm text-gray-400 px-2">${formatSimpleDate(r.date)}</td>
                     </tr>
                 `;
             });
@@ -381,7 +411,7 @@
                 '繳款人': r.name,
                 '收費年月': formatMonthsList(r.months),
                 '總金額': r.amount,
-                '收費日期': r.date
+                '收費日期': formatSimpleDate(r.date)
             }));
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
@@ -393,9 +423,24 @@
             const element = document.getElementById('pdfArea');
             const header = element.querySelector('.pdf-only-header');
             const dateSpan = document.getElementById('exportDateSpan');
+            const yearTitle = document.getElementById('pdfYearTitle');
+            const monthFilt = document.getElementById('queryMonth').value;
+
+            // 設置動態標題
+            if (monthFilt) {
+                const [y, m] = monthFilt.split('-');
+                yearTitle.textContent = `${y}年 ${parseInt(m, 10)}月 掃地費`;
+            } else {
+                const currentYear = new Intl.DateTimeFormat('zh-TW', { year: 'numeric', timeZone: 'Asia/Taipei' }).format(new Date());
+                yearTitle.textContent = `${currentYear}度 掃地費管理總`;
+            }
             
             header.classList.remove('hidden');
-            dateSpan.textContent = new Date().toLocaleString();
+            dateSpan.textContent = new Intl.DateTimeFormat('zh-TW', { 
+                year: 'numeric', month: '2-digit', day: '2-digit', 
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                timeZone: 'Asia/Taipei' 
+            }).format(new Date());
 
             const opt = {
                 margin: 10,
@@ -404,7 +449,6 @@
                 html2canvas: { scale: 2, useCORS: true, letterRendering: true },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
-
             html2pdf().set(opt).from(element).save().then(() => {
                 header.classList.add('hidden');
             });
@@ -417,7 +461,13 @@
 
         window.onload = () => {
             generateMonthGrid();
-            document.getElementById('payDate').valueAsDate = new Date();
+            
+            // 獲取台灣當前日期字串 (YYYY-MM-DD)
+            const twDate = new Intl.DateTimeFormat('sv-SE', { 
+                timeZone: 'Asia/Taipei' 
+            }).format(new Date());
+            document.getElementById('payDate').value = twDate;
+
             initData();
         };
     </script>
