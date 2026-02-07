@@ -54,118 +54,168 @@
             background: #10b981;
             border-radius: 10px;
         }
+        /* 密碼頁面樣式 */
+        #authOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #10b981, #3b82f6);
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
-    <canvas id="bgCanvas" class="dynamic-bg"></canvas>
-
-    <div class="max-w-4xl mx-auto">
-        <!-- Header -->
-        <header class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold eco-gradient">掃地費小幫手</h1>
-            <button onclick="toggleQueryModal()" class="bg-white border-2 border-emerald-500 text-emerald-600 px-6 py-2 rounded-full hover:bg-emerald-500 hover:text-white transition-all font-medium flex items-center gap-2">
-                🔍 查詢與報表
+    <!-- 密碼驗證頁面 -->
+    <div id="authOverlay">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center animate-fade-in">
+            <div class="text-4xl mb-4">🔐</div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">掃地費管理登入</h2>
+            <p class="text-gray-500 mb-6 text-sm">請輸入密碼</p>
+            <input type="password" id="sysPassword" class="w-full border-2 border-gray-100 rounded-xl p-3 mb-4 outline-none focus:border-emerald-500 text-center tracking-widest" placeholder="請輸入密碼">
+            <button onclick="checkAuth()" class="w-full bg-emerald-500 text-white py-3 rounded-xl font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">
+                驗證並進入
             </button>
-        </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <!-- 收費登記頁面 -->
-            <section class="glass-card p-6 rounded-3xl">
-                <h2 class="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
-                    <span class="p-2 bg-emerald-100 rounded-lg text-emerald-600">📝</span> 新增收費登記
-                </h2>
-                
-                <form id="payForm" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">繳款人姓名</label>
-                        <select id="userName" class="w-full border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none shadow-sm" required>
-                            <option value="">請選擇姓名...</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-2">收費年月 (可複選)</label>
-                        <!-- 新增固定高度與滾輪 -->
-                        <div id="monthGridContainer" class="max-h-48 overflow-y-auto pr-2 custom-scrollbar border border-gray-50 rounded-xl p-2 bg-white/50">
-                            <div id="monthGrid" class="grid grid-cols-3 gap-2">
-                                <!-- JS 生成月份按鈕 -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">單月費用</label>
-                        <div class="flex items-center gap-2 text-2xl font-bold text-emerald-600">
-                            NT$ 200
-                        </div>
-                        <p class="text-xs text-gray-400">總計：NT$ <span id="displayAmount">0</span></p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">收費日期</label>
-                        <input type="date" id="payDate" class="w-full border-gray-200 rounded-xl p-3 outline-none" required>
-                    </div>
-
-                    <button type="submit" id="submitBtn" class="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-600 shadow-lg shadow-emerald-200 transition-all transform active:scale-95">
-                        確認登記
-                    </button>
-                </form>
-            </section>
-
-            <!-- 最近收費紀錄 (24H) -->
-            <section class="glass-card p-6 rounded-3xl">
-                <h2 class="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
-                    <span class="p-2 bg-blue-100 rounded-lg text-blue-600">🕒</span> 24小時內紀錄
-                </h2>
-                <div id="recentRecords" class="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    <div class="text-center text-gray-400 py-10 italic">載入資料中...</div>
-                </div>
-            </section>
+            <p id="authError" class="text-red-500 text-xs mt-3 hidden">密碼錯誤，請重新輸入</p>
         </div>
     </div>
 
-    <!-- 查詢 Modal -->
-    <div id="queryModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-emerald-50">
-                <h3 class="text-xl font-bold text-emerald-800">收費記錄查詢與報表下載</h3>
-                <button onclick="toggleQueryModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-            
-            <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white">
-                <select id="queryName" class="border rounded-xl p-2 outline-none focus:ring-2 focus:ring-emerald-500">
-                    <option value="">所有姓名</option>
-                </select>
-                <input type="month" id="queryMonth" class="border rounded-xl p-2 outline-none">
-                <div class="flex gap-2">
-                    <button onclick="exportExcel()" class="flex-1 bg-green-100 text-green-700 px-3 py-2 rounded-xl text-sm font-bold hover:bg-green-200 transition-all">Excel</button>
-                    <button onclick="exportPDF()" class="flex-1 bg-red-100 text-red-700 px-3 py-2 rounded-xl text-sm font-bold hover:bg-red-200 transition-all">PDF</button>
-                </div>
-            </div>
+    <!-- 主內容區塊 (預設隱藏) -->
+    <div id="mainContent" class="hidden">
+        <canvas id="bgCanvas" class="dynamic-bg"></canvas>
 
-            <div id="pdfArea" class="flex-1 overflow-y-auto p-6 pt-0 bg-white custom-scrollbar">
-                <div class="hidden pdf-only-header py-4 text-center">
-                    <h1 class="text-2xl font-bold"><span id="pdfYearTitle"></span>管理報表</h1>
-                    <p class="text-sm text-gray-500">產出日期：<span id="exportDateSpan"></span></p>
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <header class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold eco-gradient">掃地費小幫手</h1>
+                <button onclick="toggleQueryModal()" class="bg-white border-2 border-emerald-500 text-emerald-600 px-6 py-2 rounded-full hover:bg-emerald-500 hover:text-white transition-all font-medium flex items-center gap-2">
+                    🔍 查詢與報表
+                </button>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- 收費登記頁面 -->
+                <section class="glass-card p-6 rounded-3xl">
+                    <h2 class="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+                        <span class="p-2 bg-emerald-100 rounded-lg text-emerald-600">📝</span> 新增收費登記
+                    </h2>
+                    
+                    <form id="payForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">繳款人姓名</label>
+                            <select id="userName" class="w-full border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none shadow-sm" required>
+                                <option value="">請選擇姓名...</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-2">收費年月 (可複選)</label>
+                            <div id="monthGridContainer" class="max-h-48 overflow-y-auto pr-2 custom-scrollbar border border-gray-50 rounded-xl p-2 bg-white/50">
+                                <div id="monthGrid" class="grid grid-cols-3 gap-2">
+                                    <!-- JS 生成月份按鈕 -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">單月費用</label>
+                            <div class="flex items-center gap-2 text-2xl font-bold text-emerald-600">
+                                NT$ 200
+                            </div>
+                            <p class="text-xs text-gray-400">總計：NT$ <span id="displayAmount">0</span></p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">收費日期</label>
+                            <input type="date" id="payDate" class="w-full border-gray-200 rounded-xl p-3 outline-none" required>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-600 shadow-lg shadow-emerald-200 transition-all transform active:scale-95">
+                            確認登記
+                        </button>
+                    </form>
+                </section>
+
+                <!-- 最近收費紀錄 (24H) -->
+                <section class="glass-card p-6 rounded-3xl">
+                    <h2 class="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+                        <span class="p-2 bg-blue-100 rounded-lg text-blue-600">🕒</span> 24小時內紀錄
+                    </h2>
+                    <div id="recentRecords" class="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                        <div class="text-center text-gray-400 py-10 italic">載入資料中...</div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- 查詢 Modal -->
+        <div id="queryModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-emerald-50">
+                    <h3 class="text-xl font-bold text-emerald-800">收費記錄查詢與報表下載</h3>
+                    <button onclick="toggleQueryModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
                 </div>
-                <table id="recordTable" class="w-full text-left">
-                    <thead class="sticky top-0 bg-white">
-                        <tr class="text-gray-400 text-sm border-b uppercase">
-                            <th class="py-3 font-medium px-2">姓名</th>
-                            <th class="py-3 font-medium px-2">年月</th>
-                            <th class="py-3 font-medium px-2">金額</th>
-                            <th class="py-3 font-medium px-2">收費日</th>
-                        </tr>
-                    </thead>
-                    <tbody id="queryResultBody" class="text-gray-600">
-                        <!-- JS 動態渲染 -->
-                    </tbody>
-                </table>
+                
+                <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white">
+                    <select id="queryName" class="border rounded-xl p-2 outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="">所有姓名</option>
+                    </select>
+                    <input type="month" id="queryMonth" class="border rounded-xl p-2 outline-none">
+                    <div class="flex gap-2">
+                        <button onclick="exportExcel()" class="flex-1 bg-green-100 text-green-700 px-3 py-2 rounded-xl text-sm font-bold hover:bg-green-200 transition-all">Excel</button>
+                        <button onclick="exportPDF()" class="flex-1 bg-red-100 text-red-700 px-3 py-2 rounded-xl text-sm font-bold hover:bg-red-200 transition-all">PDF</button>
+                    </div>
+                </div>
+
+                <div id="pdfArea" class="flex-1 overflow-y-auto p-6 pt-0 bg-white custom-scrollbar">
+                    <div class="hidden pdf-only-header py-4 text-center">
+                        <h1 class="text-2xl font-bold"><span id="pdfYearTitle"></span>管理報表</h1>
+                        <p class="text-sm text-gray-500">產出日期：<span id="exportDateSpan"></span></p>
+                    </div>
+                    <table id="recordTable" class="w-full text-left">
+                        <thead class="sticky top-0 bg-white">
+                            <tr class="text-gray-400 text-sm border-b uppercase">
+                                <th class="py-3 font-medium px-2">姓名</th>
+                                <th class="py-3 font-medium px-2">年月</th>
+                                <th class="py-3 font-medium px-2">金額</th>
+                                <th class="py-3 font-medium px-2">收費日</th>
+                            </tr>
+                        </thead>
+                        <tbody id="queryResultBody" class="text-gray-600">
+                            <!-- JS 動態渲染 -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
+        // --- 認證邏輯 ---
+        const SYSTEM_PASSWORD = "1234"; // 您可以在此修改進入密碼
+
+        function checkAuth() {
+            const pwd = document.getElementById('sysPassword').value;
+            const errorLabel = document.getElementById('authError');
+            
+            if (pwd === SYSTEM_PASSWORD) {
+                sessionStorage.setItem('isEcoAuth', 'true');
+                document.getElementById('authOverlay').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                initBg();
+                animate();
+            } else {
+                errorLabel.classList.remove('hidden');
+                document.getElementById('sysPassword').value = '';
+            }
+        }
+
+        // 監聽 Enter 鍵登入
+        document.getElementById('sysPassword')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkAuth();
+        });
+
         // --- 設定與初始化 ---
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5FWQw4ai_eYiAtLxOYbiGKxPvS8C3w8pb7PCBO0feqWidLgqLSN0AA-bpOwLQWPMFbQ/exec"; 
         let allRecords = [];
@@ -177,6 +227,7 @@
         const ctx = canvas.getContext('2d');
         let particles = [];
         function initBg() {
+            if (document.getElementById('mainContent').classList.contains('hidden')) return;
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             particles = [];
@@ -192,6 +243,7 @@
             }
         }
         function animate() {
+            if (document.getElementById('mainContent').classList.contains('hidden')) return;
             ctx.clearRect(0,0, canvas.width, canvas.height);
             particles.forEach(p => {
                 ctx.beginPath();
@@ -205,7 +257,6 @@
             requestAnimationFrame(animate);
         }
         window.addEventListener('resize', initBg);
-        initBg(); animate();
 
         // --- 輔助函式：日期顯示格式化 ---
         function formatMonthDisplay(monthStr) {
@@ -227,7 +278,6 @@
             }
         }
 
-        // 格式化收費日期為 YYYY-MM-DD
         function formatSimpleDate(dateStr) {
             if (!dateStr) return "";
             try {
@@ -247,19 +297,15 @@
             return monthsStr.split(',').map(m => formatMonthDisplay(m.trim())).sort().reverse().join(', ');
         }
 
-        // --- 月份選取器生成 (去年 + 今年) ---
         function generateMonthGrid() {
             const grid = document.getElementById('monthGrid');
             const now = new Date();
             const currentYear = now.getFullYear();
             const lastYear = currentYear - 1;
-            
-            // 定義要顯示的年份
             const years = [lastYear, currentYear];
             
             grid.innerHTML = '';
             years.forEach(year => {
-                // 新增年份分隔標籤
                 const divider = document.createElement('div');
                 divider.className = "col-span-3 text-xs font-bold text-gray-400 mt-2 mb-1 border-b border-gray-100 pb-1";
                 divider.textContent = `${year} 年份`;
@@ -288,7 +334,6 @@
             });
         }
 
-        // --- API 通訊 ---
         async function callAPI(data) {
             try {
                 const response = await fetch(SCRIPT_URL, {
@@ -342,36 +387,24 @@
                 `;
                 list.appendChild(card);
             });
-
             updateQueryResult();
         }
 
         document.getElementById('payForm').onsubmit = async (e) => {
             e.preventDefault();
             if(!selectedMonths.length) return alert('請選擇月份');
-            
             const btn = document.getElementById('submitBtn');
             const originalText = btn.textContent;
             btn.disabled = true;
-            
             const name = document.getElementById('userName').value;
             const payDate = document.getElementById('payDate').value;
 
             let successCount = 0;
-            // 排序所選月份確保登記順序
             selectedMonths.sort();
-            
             for (let i = 0; i < selectedMonths.length; i++) {
                 const month = selectedMonths[i];
                 btn.textContent = `處理中 (${i + 1}/${selectedMonths.length})...`;
-                
-                const data = {
-                    name: name,
-                    months: [month],
-                    amount: 200,
-                    date: payDate
-                };
-
+                const data = { name, months: [month], amount: 200, date: payDate };
                 const res = await callAPI({ action: 'addRecord', data });
                 if(res && res.success) successCount++;
             }
@@ -380,7 +413,7 @@
                 alert(`成功登記 ${successCount} 個月份！`);
                 location.reload();
             } else {
-                alert(`登記完成，但部分失敗 (成功: ${successCount}/${selectedMonths.length})。請檢查網路。`);
+                alert(`登記完成，但部分失敗。`);
                 btn.disabled = false;
                 btn.textContent = originalText;
             }
@@ -404,7 +437,6 @@
         function updateQueryResult() {
             const nameFilt = document.getElementById('queryName').value;
             const monthFilt = document.getElementById('queryMonth').value; 
-            
             const filtered = allRecords.filter(r => {
                 const matchName = !nameFilt || r.name === nameFilt;
                 let matchMonth = true;
@@ -493,6 +525,14 @@
         }
 
         window.onload = () => {
+            // 檢查是否已經認證過 (Session)
+            if (sessionStorage.getItem('isEcoAuth') === 'true') {
+                document.getElementById('authOverlay').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                initBg();
+                animate();
+            }
+
             generateMonthGrid();
             const twDate = new Intl.DateTimeFormat('sv-SE', { 
                 timeZone: 'Asia/Taipei' 
