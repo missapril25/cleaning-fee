@@ -193,7 +193,7 @@
 
     <script>
         // --- 認證邏輯 ---
-        const SYSTEM_PASSWORD = "1234"; // 您可以在此修改進入密碼
+        const SYSTEM_PASSWORD = "1234"; 
 
         function checkAuth() {
             const pwd = document.getElementById('sysPassword').value;
@@ -201,17 +201,25 @@
             
             if (pwd === SYSTEM_PASSWORD) {
                 sessionStorage.setItem('isEcoAuth', 'true');
-                document.getElementById('authOverlay').classList.add('hidden');
-                document.getElementById('mainContent').classList.remove('hidden');
-                initBg();
-                animate();
+                showMainApp();
             } else {
                 errorLabel.classList.remove('hidden');
                 document.getElementById('sysPassword').value = '';
             }
         }
 
-        // 監聽 Enter 鍵登入
+        // 顯示主程式並初始化所有組件
+        function showMainApp() {
+            document.getElementById('authOverlay').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+            
+            // 重新初始化所有與 DOM 尺寸相關的邏輯
+            initBg();
+            animate();
+            generateMonthGrid(); // 確保月份按鈕正確生成
+            initData(); // 開始從 API 抓取資料
+        }
+
         document.getElementById('sysPassword')?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') checkAuth();
         });
@@ -258,7 +266,7 @@
         }
         window.addEventListener('resize', initBg);
 
-        // --- 輔助函式：日期顯示格式化 ---
+        // --- 輔助函式 ---
         function formatMonthDisplay(monthStr) {
             if (!monthStr) return "";
             try {
@@ -273,9 +281,7 @@
                     return `${parts[0]}年 ${parseInt(parts[1], 10)}月`;
                 }
                 return monthStr;
-            } catch (e) {
-                return monthStr;
-            }
+            } catch (e) { return monthStr; }
         }
 
         function formatSimpleDate(dateStr) {
@@ -287,9 +293,7 @@
                 const m = String(date.getMonth() + 1).padStart(2, '0');
                 const d = String(date.getDate()).padStart(2, '0');
                 return `${y}-${m}-${d}`;
-            } catch (e) {
-                return dateStr;
-            }
+            } catch (e) { return dateStr; }
         }
 
         function formatMonthsList(monthsStr) {
@@ -299,6 +303,7 @@
 
         function generateMonthGrid() {
             const grid = document.getElementById('monthGrid');
+            if (!grid) return;
             const now = new Date();
             const currentYear = now.getFullYear();
             const lastYear = currentYear - 1;
@@ -360,6 +365,8 @@
         function renderUI() {
             const userSelect = document.getElementById('userName');
             const querySelect = document.getElementById('queryName');
+            if (!userSelect || !querySelect) return;
+
             userSelect.innerHTML = '<option value="">請選擇姓名...</option>';
             querySelect.innerHTML = '<option value="">所有姓名</option>';
             userNames.forEach(name => {
@@ -455,6 +462,7 @@
             });
 
             const body = document.getElementById('queryResultBody');
+            if (!body) return;
             body.innerHTML = '';
             filtered.forEach(r => {
                 body.innerHTML += `
@@ -525,20 +533,17 @@
         }
 
         window.onload = () => {
-            // 檢查是否已經認證過 (Session)
-            if (sessionStorage.getItem('isEcoAuth') === 'true') {
-                document.getElementById('authOverlay').classList.add('hidden');
-                document.getElementById('mainContent').classList.remove('hidden');
-                initBg();
-                animate();
-            }
-
-            generateMonthGrid();
+            // 設定今日日期預設值
             const twDate = new Intl.DateTimeFormat('sv-SE', { 
                 timeZone: 'Asia/Taipei' 
             }).format(new Date());
-            document.getElementById('payDate').value = twDate;
-            initData();
+            const dateInput = document.getElementById('payDate');
+            if (dateInput) dateInput.value = twDate;
+
+            // 檢查是否已經認證過 (Session)
+            if (sessionStorage.getItem('isEcoAuth') === 'true') {
+                showMainApp();
+            }
         };
     </script>
 </body>
