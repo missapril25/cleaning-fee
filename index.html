@@ -192,11 +192,40 @@
         window.addEventListener('resize', initBg);
         initBg(); animate();
 
+        // --- 輔助函式：日期顯示格式化 ---
+        // 將 YYYY-MM 或 ISO 字串轉換為 "YYYY年 M月"
+        function formatMonthDisplay(monthStr) {
+            if (!monthStr) return "";
+            try {
+                // 如果是 ISO 格式，先轉成日期對象
+                const date = new Date(monthStr);
+                if (!isNaN(date.getTime())) {
+                    // 使用當地時間取得年月，避免時區偏移導致月份錯誤
+                    return `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
+                }
+                // 如果是單純的 YYYY-MM 格式字串
+                const parts = monthStr.split('-');
+                if (parts.length >= 2) {
+                    return `${parts[0]}年 ${parseInt(parts[1], 10)}月`;
+                }
+                return monthStr;
+            } catch (e) {
+                return monthStr;
+            }
+        }
+
+        // 將複數月份字串格式化顯示
+        function formatMonthsList(monthsStr) {
+            if (!monthsStr) return "";
+            return monthsStr.split(',').map(m => formatMonthDisplay(m.trim())).join(', ');
+        }
+
         // --- 月份選取器生成 ---
         function generateMonthGrid() {
             const grid = document.getElementById('monthGrid');
             const now = new Date();
             for(let i=0; i<12; i++) {
+                const date = new Date(now.getFullYear(), i, 1);
                 const val = `${now.getFullYear()}-${(i+1).toString().padStart(2,'0')}`;
                 const btn = document.createElement('div');
                 btn.textContent = `${i+1}月`;
@@ -263,7 +292,7 @@
                 card.innerHTML = `
                     <div>
                         <div class="font-bold text-gray-700">${r.name}</div>
-                        <div class="text-xs text-gray-400">年月: ${r.months}</div>
+                        <div class="text-xs text-gray-400">年月: ${formatMonthsList(r.months)}</div>
                         <div class="text-xs text-emerald-500 font-medium">NT$ ${r.amount}</div>
                     </div>
                     <button onclick="handleDelete('${r.id}', this)" class="text-red-300 hover:text-red-500 p-2 transition-colors text-xl">🗑️</button>
@@ -335,7 +364,7 @@
                 body.innerHTML += `
                     <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                         <td class="py-4 font-medium text-gray-700 px-2">${r.name}</td>
-                        <td class="py-4 text-sm px-2">${r.months}</td>
+                        <td class="py-4 text-sm px-2">${formatMonthsList(r.months)}</td>
                         <td class="py-4 text-sm text-emerald-600 font-bold px-2">$${r.amount}</td>
                         <td class="py-4 text-sm text-gray-400 px-2">${r.date}</td>
                     </tr>
@@ -350,7 +379,7 @@
         function exportExcel() {
             const data = window.lastFiltered.map(r => ({
                 '繳款人': r.name,
-                '收費年月': r.months,
+                '收費年月': formatMonthsList(r.months),
                 '總金額': r.amount,
                 '收費日期': r.date
             }));
